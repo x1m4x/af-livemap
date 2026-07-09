@@ -358,7 +358,8 @@ const View3D = (() => {
       const p = project(w.x, w.y, w.z);
       if (!p) continue;
       const label = playerPos
-        ? `${w.name} (${Math.hypot(w.x - playerPos[0], w.y - playerPos[1], w.z - playerPos[2]).toFixed(0)} м)`
+        ? t("hud_distance", { name: w.name,
+            dist: Math.hypot(w.x - playerPos[0], w.y - playerPos[1], w.z - playerPos[2]).toFixed(0) })
         : w.name;
       hudCtx.fillStyle = "rgba(13, 17, 23, 0.75)";
       const width = hudCtx.measureText(label).width + 10;

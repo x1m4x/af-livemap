@@ -89,7 +89,7 @@ async function loadWorlds() {
     if (!state.viewedWorld && state.worlds.length > 0) {
       switchViewedWorld(state.worlds[0]);
     }
-  } catch (err) { /* сервер недоступен */ }
+  } catch (err) { /* server unavailable */ }
 }
 
 function renderWorldSelect() {
@@ -102,7 +102,7 @@ function renderWorldSelect() {
   for (const world of worlds) {
     const option = document.createElement("option");
     option.value = world;
-    option.textContent = world + (world === state.world ? " (тут игрок)" : "");
+    option.textContent = world + (world === state.world ? t("world_player_here") : "");
     select.appendChild(option);
   }
   if (state.viewedWorld) select.value = state.viewedWorld;
@@ -295,7 +295,7 @@ function syncView3dMarkers() {
       markers.push({ x: portal.from.x, y: portal.from.y, z: portal.from.z, name: "◎ " + portal.name });
     }
     if (portal.to.world === state.viewedWorld) {
-      markers.push({ x: portal.to.x, y: portal.to.y, z: portal.to.z, name: "◎ выход: " + portal.name });
+      markers.push({ x: portal.to.x, y: portal.to.y, z: portal.to.z, name: "◎ " + t("portal_exit_prefix") + portal.name });
     }
   }
   for (const cart of state.carts) {
@@ -314,7 +314,7 @@ async function loadWaypoints() {
     state.waypoints = (await resp.json()).waypoints || [];
     renderWaypointList();
     syncView3dMarkers();
-  } catch (err) { /* сервер недоступен */ }
+  } catch (err) { /* server unavailable */ }
 }
 
 async function addWaypoint(name, x, y, z) {
@@ -363,16 +363,16 @@ function makeButton(text, onclick, title) {
 
 function makeRouteButton(pseudoId, name, world, x, y, z, label) {
   const isActive = state.route.target && state.route.target.id === pseudoId;
-  const btn = makeButton(isActive ? "Стоп" : (label || "Маршрут"),
+  const btn = makeButton(isActive ? t("stop_btn") : (label || t("route_btn")),
     () => startRouteTo(pseudoId, name, world, x, y, z),
-    "Построить маршрут");
+    t("route_title"));
   if (isActive) btn.className = "wp-active";
   return btn;
 }
 
 function makeRenameButton(endpoint, id, oldName, reload) {
   return makeButton("✎", async () => {
-    const name = prompt("Новое название:", oldName);
+    const name = prompt(t("rename_prompt"), oldName);
     if (name === null || !name.trim()) return;
     const resp = await fetch(endpoint, {
       method: "POST",
@@ -380,11 +380,11 @@ function makeRenameButton(endpoint, id, oldName, reload) {
       body: JSON.stringify({ action: "rename", id, name: name.trim() }),
     });
     if (!resp.ok) {
-      alert("Сервер не принял переименование — перезапусти server.py (у тебя старая версия).");
+      alert(t("rename_failed"));
       return;
     }
     await reload();
-  }, "Переименовать");
+  }, t("rename_btn_title"));
 }
 
 function makeRow(list, labelText, jumpPos, buttons) {
@@ -392,7 +392,7 @@ function makeRow(list, labelText, jumpPos, buttons) {
   row.className = "wp-row";
   const name = document.createElement("span");
   name.className = "wp-name";
-  name.title = "Показать на карте";
+  name.title = t("show_on_map");
   name.textContent = labelText;
   name.onclick = () => jumpTo(jumpPos.x, jumpPos.y, jumpPos.z);
   row.appendChild(name);
@@ -406,7 +406,7 @@ function renderWaypointList() {
   if (state.waypoints.length === 0) {
     const empty = document.createElement("div");
     empty.className = "wp-name";
-    empty.textContent = "Точек в этом мире нет. «+ Точка» ставит точку там, где ты стоишь.";
+    empty.textContent = t("no_waypoints");
     list.appendChild(empty);
   }
 
@@ -415,20 +415,21 @@ function renderWaypointList() {
       makeRenameButton("/api/waypoints", wp.id, wp.name, loadWaypoints),
       makeRouteButton(wp.id, wp.name, wp.world, wp.x, wp.y, wp.z),
       makeButton("×", () => {
-        if (confirm(`Удалить точку «${wp.name}»?`)) deleteWaypoint(wp.id);
-      }, "Удалить"),
+        if (confirm(t("confirm_delete_waypoint", { name: wp.name }))) deleteWaypoint(wp.id);
+      }, t("delete_btn")),
     ]);
   }
 
   for (const elevator of state.elevators) {
     makeRow(list,
-      `⬍ ${elevator.name} (${elevator.stops.length} эт.${elevator.doors ? ", двери" : ""})`,
+      t("elevator_label", { name: elevator.name, n: elevator.stops.length,
+        doors: elevator.doors ? t("elevator_doors_suffix") : "" }),
       { x: elevator.x, y: elevator.y, z: elevator.stops[0] },
       [
         makeRenameButton("/api/elevators", elevator.id, elevator.name, loadElevators),
         makeButton("×", () => {
-          if (confirm(`Удалить «${elevator.name}»? Зона снова начнёт сканироваться.`)) deleteElevator(elevator.id);
-        }, "Удалить"),
+          if (confirm(t("confirm_delete_elevator", { name: elevator.name }))) deleteElevator(elevator.id);
+        }, t("delete_btn")),
       ]);
   }
 
@@ -442,22 +443,22 @@ function renderWaypointList() {
         makeRenameButton("/api/portals", portal.id, portal.name, loadPortals),
         makeRouteButton(`portal:${portal.id}`, portal.name, anchor.world, anchor.x, anchor.y, anchor.z),
         makeButton("×", () => {
-          if (confirm(`Удалить «${portal.name}»? (ложные срабатывания — например, после смерти — удаляй смело)`)) deletePortal(portal.id);
-        }, "Удалить"),
+          if (confirm(t("confirm_delete_portal", { name: portal.name }))) deletePortal(portal.id);
+        }, t("delete_btn")),
       ]);
   }
 
   for (const zone of state.portalIgnore) {
     makeRow(list,
-      `🚫 ${zone.name} (не портал, ${(zone.radius / 100).toFixed(0)} м)`,
+      t("zone_label", { name: zone.name, m: (zone.radius / 100).toFixed(0) }),
       zone,
       [
         makeRenameButton("/api/portals", zone.id, zone.name, loadPortals),
         makeButton("×", () => {
-          if (confirm(`Удалить зону «${zone.name}»? Телепорты сюда снова начнут записываться как порталы.`)) {
+          if (confirm(t("confirm_delete_zone", { name: zone.name }))) {
             deletePortalIgnoreZone(zone.id);
           }
-        }, "Удалить"),
+        }, t("delete_btn")),
       ]);
   }
 
@@ -465,15 +466,15 @@ function renderWaypointList() {
     const first = cart.path[0];
     const last = cart.path[cart.path.length - 1];
     makeRow(list,
-      `⛟ ${cart.name} (${cartLengthMeters(cart).toFixed(0)} м)`,
+      t("cart_label", { name: cart.name, m: cartLengthMeters(cart).toFixed(0) }),
       { x: first[0], y: first[1], z: first[2] },
       [
         makeRenameButton("/api/carts", cart.id, cart.name, loadCarts),
-        makeRouteButton(`cart:${cart.id}:a`, `${cart.name} (начало)`, cart.world, first[0], first[1], first[2], "▶А"),
-        makeRouteButton(`cart:${cart.id}:b`, `${cart.name} (конец)`, cart.world, last[0], last[1], last[2], "▶Б"),
+        makeRouteButton(`cart:${cart.id}:a`, t("cart_start_name", { name: cart.name }), cart.world, first[0], first[1], first[2], "▶A"),
+        makeRouteButton(`cart:${cart.id}:b`, t("cart_end_name", { name: cart.name }), cart.world, last[0], last[1], last[2], "▶B"),
         makeButton("×", () => {
-          if (confirm(`Удалить «${cart.name}»?`)) deleteCart(cart.id);
-        }, "Удалить"),
+          if (confirm(t("confirm_delete_cart", { name: cart.name }))) deleteCart(cart.id);
+        }, t("delete_btn")),
       ]);
   }
 }
@@ -487,7 +488,7 @@ async function loadElevators() {
     state.elevators = (await resp.json()).elevators || [];
     renderWaypointList();
     syncView3dMarkers();
-  } catch (err) { /* сервер недоступен */ }
+  } catch (err) { /* server unavailable */ }
 }
 
 async function deleteElevator(id) {
@@ -514,7 +515,7 @@ async function pollWalked() {
         state.walkedVersion = payload.version;
       }
     }
-  } catch (err) { /* сервер недоступен */ }
+  } catch (err) { /* server unavailable */ }
   setTimeout(pollWalked, 5000);
 }
 
@@ -536,7 +537,7 @@ async function loadCarts() {
     state.carts = (await resp.json()).carts || [];
     renderWaypointList();
     syncView3dMarkers();
-  } catch (err) { /* сервер недоступен */ }
+  } catch (err) { /* server unavailable */ }
 }
 
 async function deleteCart(id) {
@@ -564,9 +565,9 @@ async function finishCartRecording() {
   state.cartRec = null;
   const btn = document.getElementById("cartBtn");
   btn.classList.remove("recording");
-  btn.textContent = "Тележка";
+  btn.textContent = t("cart");
 
-  // Прореживаем путь: точка каждые >= 1.5 м
+  // Thin out the path: one point every >= 1.5 m
   const path = [];
   for (const s of samples) {
     const last = path[path.length - 1];
@@ -576,22 +577,23 @@ async function finishCartRecording() {
   }
   const length = path.length >= 2 ? cartLengthMeters({ path }) : 0;
   if (path.length < 3 || length < 10) {
-    alert("Слишком короткая запись — сядь в тележку, нажми «Тележка», доедь до конца и нажми ещё раз.");
+    alert(t("cart_too_short"));
     return;
   }
-  const name = prompt(`Маршрут тележки: ${length.toFixed(0)} м. Название:`, `Тележка ${state.carts.length + 1}`);
+  const name = prompt(t("cart_prompt", { m: length.toFixed(0) }),
+    t("cart_default_name", { n: state.carts.length + 1 }));
   if (name === null) return;
 
   const resp = await fetch("/api/carts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "add", name: (name || "Тележка").trim(), world: state.world, path }),
+    body: JSON.stringify({ action: "add", name: (name || t("cart_default_base")).trim(), world: state.world, path }),
   });
   if (resp.ok) {
     await loadCarts();
     state.route.lastCalc = 0;
   } else {
-    alert("Не удалось сохранить: " + (await resp.text()));
+    alert(t("save_failed") + (await resp.text()));
   }
 }
 
@@ -606,7 +608,7 @@ async function loadPortals() {
     state.portalIgnore = payload.ignore || [];
     renderWaypointList();
     syncView3dMarkers();
-  } catch (err) { /* сервер недоступен */ }
+  } catch (err) { /* server unavailable */ }
 }
 
 function inPortalIgnoreZone(world, x, y, z) {
@@ -623,7 +625,7 @@ async function addPortalIgnoreZone(name, radius, x, y, z) {
   if (resp.ok) {
     const result = await resp.json();
     await loadPortals();
-    alert(`Зона «${name}» создана (${(radius / 100).toFixed(0)} м). Удалено старых порталов: ${result.purgedPortals}.`);
+    alert(t("zone_created", { name, m: (radius / 100).toFixed(0), purged: result.purgedPortals }));
   }
 }
 
@@ -652,7 +654,7 @@ async function reportPortal(from, to) {
   // Телепорт в зону «не портал» (например, предметом на базу) — не записываем
   if (inPortalIgnoreZone(to.world, to.x, to.y, to.z)) return;
   const crossWorld = from.world !== to.world;
-  const name = crossWorld ? `Портал → ${to.world}` : "Портал";
+  const name = crossWorld ? t("portal_name_cross", { world: to.world }) : t("portal_name");
   try {
     const resp = await fetch("/api/portals", {
       method: "POST",
@@ -662,12 +664,12 @@ async function reportPortal(from, to) {
     if (resp.ok) {
       const result = await resp.json();
       if (!result.duplicate) {
-        console.info("Обнаружен новый портал:", result.portal);
+        console.info(t("new_portal_console"), result.portal);
       }
       await loadPortals();
       state.route.lastCalc = 0;
     }
-  } catch (err) { /* сервер недоступен */ }
+  } catch (err) { /* server unavailable */ }
 }
 
 // Подавление после смерти: телепорт на респаун — не портал.
@@ -747,36 +749,37 @@ async function finishElevatorRecording() {
   const samples = state.elevatorRec.samples;
   state.elevatorRec = null;
   document.getElementById("elevatorBtn").classList.remove("recording");
-  document.getElementById("elevatorBtn").textContent = "Лифт";
+  document.getElementById("elevatorBtn").textContent = t("elevator");
 
   if (samples.length < 10) {
-    alert("Слишком короткая запись — встань в лифт, нажми «Лифт», прокатись по всем этажам и нажми ещё раз.");
+    alert(t("elevator_too_short"));
     return;
   }
   const stops = detectElevatorStops(samples);
   if (stops.length < 2) {
-    alert(`Найдена только ${stops.length} остановка. Прокатись по всем этажам, задерживаясь на каждом хотя бы пару секунд.`);
+    alert(t("elevator_few_stops", { n: stops.length }));
     return;
   }
-  // Центр и радиус зоны — по горизонтальному разбросу записи
+  // Zone center and radius from the horizontal spread of the recording
   const cx = samples.reduce((s, p) => s + p.x, 0) / samples.length;
   const cy = samples.reduce((s, p) => s + p.y, 0) / samples.length;
   const spread = Math.max(...samples.map(p => Math.hypot(p.x - cx, p.y - cy)));
   if (spread > 700) {
-    alert("Во время записи ты уходил далеко от лифта — запись отменена. Оставайся в кабине.");
+    alert(t("elevator_too_far"));
     return;
   }
-  const name = prompt(`Лифт с ${stops.length} остановками. Название:`, `Лифт ${state.elevators.length + 1}`);
+  const name = prompt(t("elevator_prompt", { n: stops.length }),
+    t("elevator_default_name", { n: state.elevators.length + 1 }));
   if (name === null) return;
-  // У лифта с дверями зона шире: двери в скане — «мерцающая» стена, их тоже исключаем
-  const doors = confirm("У этого лифта есть закрывающиеся двери?\nОК — да, Отмена — открытая платформа.");
+  // Elevators with doors get a wider zone: doors are a "flickering" wall in the scan, excluded too
+  const doors = confirm(t("elevator_doors_confirm"));
 
   const resp = await fetch("/api/elevators", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "add",
-      name: (name || "Лифт").trim(),
+      name: (name || t("elevator")).trim(),
       world: state.world,
       x: cx, y: cy,
       radius: Math.max(200, spread + 100) + (doors ? 80 : 0),
@@ -788,9 +791,9 @@ async function finishElevatorRecording() {
     const result = await resp.json();
     await loadElevators();
     state.route.lastCalc = 0;
-    alert(`Лифт сохранён: ${stops.length} остановок. Вычищено ${result.purgedCells} мусорных ячеек скана.`);
+    alert(t("elevator_saved", { n: stops.length, cells: result.purgedCells }));
   } else {
-    alert("Не удалось сохранить лифт: " + (await resp.text()));
+    alert(t("elevator_save_failed") + (await resp.text()));
   }
 }
 
@@ -959,7 +962,7 @@ function recalcRoute() {
   if (!state.route.target) return;
   const statusEl = document.getElementById("routeStatus");
   if (state.viewedWorld !== state.world) {
-    statusEl.textContent = "Маршрут доступен, когда смотришь мир, где находится игрок.";
+    statusEl.textContent = t("route_need_player_world");
     return;
   }
   const now = Date.now();
@@ -970,19 +973,19 @@ function recalcRoute() {
   const local = state.players.find(p => p.isLocal) || state.players[0];
   if (!target || !local) return;
 
-  // Точка в другом мире: ведём к входу портала, который туда телепортирует
+  // Target in another world: route to the entrance of a portal that teleports there
   let portalHint = "";
   if (target.world && target.world !== state.world) {
     const gate = state.portals.find(
       p => p.from.world === state.world && p.to.world === target.world);
     if (!gate) {
       state.route.points = [];
-      state.route.status = `Точка в мире «${target.world}», известного портала туда нет — пройди через него один раз.`;
+      state.route.status = t("route_target_other_world", { world: target.world });
       statusEl.textContent = state.route.status;
       if (view3dReady) View3D.clearRoute();
       return;
     }
-    portalHint = ` → дальше через «${gate.name}»`;
+    portalHint = t("route_via_portal", { name: gate.name });
     target = { name: target.name, x: gate.from.x, y: gate.from.y, z: gate.from.z };
   }
 
@@ -991,7 +994,7 @@ function recalcRoute() {
   const goal = nearestFloorNode(columns, target.x, target.y, target.z);
   if (!start || !goal) {
     state.route.points = [];
-    state.route.status = "Рядом нет отсканированного пола — осмотрись вокруг.";
+    state.route.status = t("route_no_floor");
     statusEl.textContent = state.route.status;
     if (view3dReady) View3D.clearRoute();
     return;
@@ -1000,7 +1003,7 @@ function recalcRoute() {
   const path = findPath(columns, start, goal, buildSpecialEdges(columns));
   if (!path) {
     state.route.points = [];
-    state.route.status = "Путь не найден: маршрут ещё не отсканирован. Пройди и осмотри дорогу один раз.";
+    state.route.status = t("route_not_found");
     statusEl.textContent = state.route.status;
     if (view3dReady) View3D.clearRoute();
     return;
@@ -1019,7 +1022,7 @@ function recalcRoute() {
   }
   const lengthMeters = state.route.points.reduce((sum, p, i, arr) =>
     i === 0 ? 0 : sum + Math.hypot(p.x - arr[i - 1].x, p.y - arr[i - 1].y, p.z - arr[i - 1].z) / 100, 0);
-  state.route.status = `Маршрут до «${target.name}»: ${lengthMeters.toFixed(0)} м${portalHint}`;
+  state.route.status = t("route_to", { name: target.name, m: lengthMeters.toFixed(0), hint: portalHint });
   statusEl.textContent = state.route.status;
   if (view3dReady) View3D.setRoute(state.route.points);
 }
@@ -1033,7 +1036,7 @@ function connectStream() {
 
   source.onopen = () => {
     state.connected = true;
-    statusEl.textContent = "подключено";
+    statusEl.textContent = t("status_connected");
     statusEl.className = "status-ok";
   };
 
@@ -1043,7 +1046,7 @@ function connectStream() {
     state.players = payload.state.players || [];
     state.world = payload.state.world || "";
 
-    // Автопереключение на мир игрока при его смене
+    // Auto-switch to the player's world when it changes
     if (state.world !== lastPlayerWorld) {
       lastPlayerWorld = state.world;
       if (state.world && state.world !== "MainMenu") {
@@ -1054,26 +1057,26 @@ function connectStream() {
     }
 
     const viewing = state.viewedWorld === state.world;
-    statusEl.textContent = `онлайн: ${state.players.length} | мир: ${state.world}`
-      + (viewing ? "" : ` | просмотр: ${state.viewedWorld}`);
+    statusEl.textContent = t("status_online", { n: state.players.length, world: state.world })
+      + (viewing ? "" : t("status_viewing", { world: state.viewedWorld }));
     statusEl.className = "status-ok";
 
     if (viewing) updateTrails();
 
     const local = state.players.find(p => p.isLocal) || state.players[0];
     if (local) detectPortal(local);
-    // Запись лифта: копим позиции игрока
+    // Elevator recording: accumulate player positions
     if (state.elevatorRec && local) {
       state.elevatorRec.samples.push({ x: local.x, y: local.y, z: local.z, t: Date.now() });
       document.getElementById("elevatorBtn").textContent =
-        `Стоп (${detectElevatorStops(state.elevatorRec.samples).length} ост.)`;
+        t("elevator_btn_stop_stops", { n: detectElevatorStops(state.elevatorRec.samples).length });
     }
-    // Запись тележки: копим путь
+    // Cart recording: accumulate the path
     if (state.cartRec && local) {
       state.cartRec.samples.push({ x: local.x, y: local.y, z: local.z, t: Date.now() });
       const first = state.cartRec.samples[0];
       const dist = Math.hypot(local.x - first.x, local.y - first.y, local.z - first.z) / 100;
-      document.getElementById("cartBtn").textContent = `Стоп (${dist.toFixed(0)} м)`;
+      document.getElementById("cartBtn").textContent = t("cart_btn_stop", { m: dist.toFixed(0) });
     }
     if (local && view3dReady) View3D.setPlayerPos(local.x, local.y, local.z);
     if (state.view3d && view3dReady) {
@@ -1101,7 +1104,7 @@ function connectStream() {
 
   source.onerror = () => {
     state.connected = false;
-    statusEl.textContent = "нет связи с сервером…";
+    statusEl.textContent = t("status_no_connection");
     statusEl.className = "status-err";
   };
 }
@@ -1207,7 +1210,7 @@ function draw() {
     ctx.textAlign = "center";
     ctx.fillText("⬍", pos.x, pos.y + 4);
     ctx.font = "12px sans-serif";
-    ctx.fillText(`${elevator.name} (${elevator.stops.length} эт.)`, pos.x, pos.y - Math.max(6, radius) - 4);
+    ctx.fillText(t("elevator_map_label", { name: elevator.name, n: elevator.stops.length }), pos.x, pos.y - Math.max(6, radius) - 4);
     ctx.textAlign = "left";
   }
 
@@ -1291,7 +1294,7 @@ function draw() {
       fromPos = drawPortalMark(portal.from, portal.name, false);
     }
     if (portal.to.world === state.viewedWorld) {
-      toPos = drawPortalMark(portal.to, "выход: " + portal.name, true);
+      toPos = drawPortalMark(portal.to, t("portal_exit_prefix") + portal.name, true);
     }
     if (fromPos && toPos) {
       ctx.strokeStyle = "rgba(192, 132, 252, 0.5)";
@@ -1366,7 +1369,11 @@ function draw() {
 
   const coordsEl = document.getElementById("coords");
   if (state.lastMouse) {
-    coordsEl.textContent = `${(state.lastMouse.x / WORLD_SCALE / 100).toFixed(0)}, ${(state.lastMouse.y / WORLD_SCALE / 100).toFixed(0)} м | zoom: ${state.zoom.toFixed(2)}`;
+    coordsEl.textContent = t("coords", {
+      x: (state.lastMouse.x / WORLD_SCALE / 100).toFixed(0),
+      y: (state.lastMouse.y / WORLD_SCALE / 100).toFixed(0),
+      zoom: state.zoom.toFixed(2),
+    });
   }
 
   requestAnimationFrame(draw);
@@ -1483,11 +1490,11 @@ document.getElementById("view3dBtn").addEventListener("click", () => {
     try {
       view3dReady = View3D.init(canvas3d, document.getElementById("hud3d"));
     } catch (err) {
-      alert("WebGL недоступен: " + err.message);
+      alert(t("webgl_error") + err.message);
       return;
     }
     if (!view3dReady) {
-      alert("WebGL недоступен в этом браузере.");
+      alert(t("webgl_unavailable"));
       return;
     }
   }
@@ -1511,11 +1518,20 @@ document.getElementById("view3dBtn").addEventListener("click", () => {
   }
 });
 
-// ==================== Контролы ====================
+// ==================== Controls ====================
 
 document.getElementById("worldSelect").addEventListener("change", (e) => {
   switchViewedWorld(e.target.value);
 });
+
+// Language selector
+(() => {
+  const sel = document.getElementById("langSelect");
+  if (sel) {
+    sel.value = I18N.lang;
+    sel.addEventListener("change", (e) => I18N.setLang(e.target.value));
+  }
+})();
 
 document.getElementById("followToggle").addEventListener("change", (e) => {
   state.follow = e.target.checked;
@@ -1529,10 +1545,10 @@ document.getElementById("trailToggle").addEventListener("change", (e) => {
 document.getElementById("addWaypointBtn").addEventListener("click", async () => {
   const local = state.players.find(p => p.isLocal) || state.players[0];
   if (!local || !state.world || state.world === "MainMenu") {
-    alert("Нет данных о позиции игрока — зайди в игру.");
+    alert(t("no_player_data"));
     return;
   }
-  const name = prompt("Название точки:", "");
+  const name = prompt(t("waypoint_prompt"), "");
   if (!name) return;
   if (state.viewedWorld !== state.world) switchViewedWorld(state.world);
   await addWaypoint(name.trim(), local.x, local.y, local.z);
@@ -1540,7 +1556,7 @@ document.getElementById("addWaypointBtn").addEventListener("click", async () => 
   document.getElementById("waypointPanel").classList.remove("hidden");
 });
 
-// Топбар на телефоне переносится на 2-3 строки — панель ставим строго под него
+// On phones the topbar wraps to 2-3 rows — place the panel right below it
 function positionWaypointPanel() {
   const bar = document.getElementById("topbar");
   document.getElementById("waypointPanel").style.top = (bar.offsetHeight + 8) + "px";
@@ -1555,14 +1571,14 @@ document.getElementById("waypointsBtn").addEventListener("click", () => {
 document.getElementById("noPortalBtn").addEventListener("click", async () => {
   const local = state.players.find(p => p.isLocal) || state.players[0];
   if (!local || !state.world || state.world === "MainMenu") {
-    alert("Нет данных о позиции игрока — зайди в игру и встань на базе.");
+    alert(t("no_player_base"));
     return;
   }
-  const name = prompt("Название зоны (например, «База»):", "База");
+  const name = prompt(t("zone_name_prompt"), t("zone_default_name"));
   if (name === null) return;
-  const radiusMeters = parseFloat(prompt("Радиус зоны, м:", "15") || "0");
+  const radiusMeters = parseFloat(prompt(t("zone_radius_prompt"), "15") || "0");
   if (!radiusMeters || radiusMeters <= 0) return;
-  await addPortalIgnoreZone((name || "База").trim(), radiusMeters * 100, local.x, local.y, local.z);
+  await addPortalIgnoreZone((name || t("zone_default_name")).trim(), radiusMeters * 100, local.x, local.y, local.z);
 });
 
 document.getElementById("elevatorBtn").addEventListener("click", () => {
@@ -1572,13 +1588,13 @@ document.getElementById("elevatorBtn").addEventListener("click", () => {
   }
   const local = state.players.find(p => p.isLocal) || state.players[0];
   if (!local || !state.world || state.world === "MainMenu") {
-    alert("Нет данных о позиции игрока — зайди в игру.");
+    alert(t("no_player_data"));
     return;
   }
   state.elevatorRec = { samples: [] };
   const btn = document.getElementById("elevatorBtn");
   btn.classList.add("recording");
-  btn.textContent = "Стоп (0 ост.)";
+  btn.textContent = t("elevator_btn_stop_zero");
 });
 
 document.getElementById("cartBtn").addEventListener("click", () => {
@@ -1588,20 +1604,20 @@ document.getElementById("cartBtn").addEventListener("click", () => {
   }
   const local = state.players.find(p => p.isLocal) || state.players[0];
   if (!local || !state.world || state.world === "MainMenu") {
-    alert("Нет данных о позиции игрока — зайди в игру.");
+    alert(t("no_player_data"));
     return;
   }
   state.cartRec = { samples: [] };
   const btn = document.getElementById("cartBtn");
   btn.classList.add("recording");
-  btn.textContent = "Стоп (0 м)";
+  btn.textContent = t("cart_btn_stop_zero");
 });
 
-// ==================== Заметки (общий блокнот, синхронизация ПК/телефон) ====================
+// ==================== Notes (shared notepad, PC/phone sync) ====================
 
 const notesText = document.getElementById("notesText");
 const notesStatus = document.getElementById("notesStatus");
-let notesServerText = null;   // последний известный текст на сервере
+let notesServerText = null;   // last known text on the server
 let notesSaveTimer = null;
 
 async function loadNotes() {
@@ -1609,15 +1625,15 @@ async function loadNotes() {
     const data = await (await fetch("/api/notes")).json();
     notesServerText = data.text;
     notesText.value = data.text;
-    notesStatus.textContent = "синхронизировано";
+    notesStatus.textContent = t("notes_synced");
   } catch (err) {
-    notesStatus.textContent = "сервер недоступен";
+    notesStatus.textContent = t("notes_server_down");
   }
 }
 
 async function saveNotes() {
   const text = notesText.value;
-  notesStatus.textContent = "сохранение…";
+  notesStatus.textContent = t("notes_saving");
   try {
     const resp = await fetch("/api/notes", {
       method: "POST",
@@ -1626,22 +1642,22 @@ async function saveNotes() {
     });
     if (resp.ok) {
       notesServerText = text;
-      notesStatus.textContent = "сохранено";
+      notesStatus.textContent = t("notes_saved");
     } else {
-      notesStatus.textContent = "ошибка сохранения";
+      notesStatus.textContent = t("notes_save_error");
     }
   } catch (err) {
-    notesStatus.textContent = "сервер недоступен — правки не сохранены";
+    notesStatus.textContent = t("notes_not_saved");
   }
 }
 
 notesText.addEventListener("input", () => {
-  notesStatus.textContent = "печатаешь…";
+  notesStatus.textContent = t("notes_typing");
   clearTimeout(notesSaveTimer);
   notesSaveTimer = setTimeout(saveNotes, 800);
 });
 
-// Подтягиваем чужие правки (например, с телефона), не мешая набору текста
+// Pull other devices' edits (e.g. from the phone) without disturbing typing
 async function pollNotes() {
   try {
     const popupOpen = !document.getElementById("notesPopup").classList.contains("hidden");
@@ -1651,10 +1667,10 @@ async function pollNotes() {
       if (data.text !== notesServerText && !localDirty && document.activeElement !== notesText) {
         notesServerText = data.text;
         notesText.value = data.text;
-        notesStatus.textContent = "обновлено с другого устройства";
+        notesStatus.textContent = t("notes_updated");
       }
     }
-  } catch (err) { /* попробуем в следующий раз */ }
+  } catch (err) { /* try again next time */ }
   setTimeout(pollNotes, 5000);
 }
 
@@ -1690,7 +1706,7 @@ async function initImagesPopup() {
     select.addEventListener("change", () => {
       document.getElementById("imageView").src = "/maps/" + select.value;
     });
-  } catch (err) { /* сервер недоступен */ }
+  } catch (err) { /* server unavailable */ }
 }
 
 document.getElementById("imagesBtn").addEventListener("click", () => {
@@ -1704,8 +1720,9 @@ document.getElementById("imagesClose").addEventListener("click", () => {
   document.getElementById("imagesPopup").classList.add("hidden");
 });
 
-// ==================== Старт ====================
+// ==================== Startup ====================
 
+I18N.applyStatic();
 loadWorlds();
 connectStream();
 pollScan();

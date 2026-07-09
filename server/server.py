@@ -1,15 +1,16 @@
 """AF LiveMap server.
 
-Локальный сервер без зависимостей (stdlib): отдаёт веб-карту, данные позиций
-из livemap.json (который пишет UE4SS-мод) и стрим обновлений через SSE.
+A dependency-free local server (stdlib): serves the web map, position data
+from livemap.json (written by the UE4SS mod) and streams updates over SSE.
 
-Запуск:
+Run:
     python server.py --data "C:\\...\\ue4ss\\Mods\\AFLiveMap\\livemap.json" [--port 8765]
 """
 
 import argparse
 import io
 import json
+import locale
 import math
 import os
 import sys
@@ -19,6 +20,63 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 if isinstance(sys.stdout, io.TextIOWrapper) and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
+# ==================== Console localization (en/ru) ====================
+
+CONSOLE_STRINGS = {
+    "en": {
+        "scan_loaded": "Scan loaded: {total} cells, worlds: {worlds}",
+        "scan_requantized": " (requantized {old:g} cm -> {new:g} cm)",
+        "walked_loaded": "Walked cells loaded: {total}",
+        "warn_line": "!" * 60,
+        "warn_not_found": "WARNING: file not found: {path}",
+        "warn_no_update": "Positions and scan will NOT update until the file appears.",
+        "warn_check_path": "Check your game path (the ue4ss\\Mods\\AFLiveMap folder).",
+        "addr_pc": "AF LiveMap (this PC):  http://127.0.0.1:{port}",
+        "addr_phone": "AF LiveMap (phone on same network):  http://{ip}:{port}",
+        "phone_hint": "If the phone can't open it: allow python through the Windows firewall (dialog on first run).",
+        "data_path": "Data: {path}",
+    },
+    "ru": {
+        "scan_loaded": "Скан загружен: {total} ячеек, миров: {worlds}",
+        "scan_requantized": " (переквантовано {old:g} см -> {new:g} см)",
+        "walked_loaded": "Прохоженные клетки загружены: {total}",
+        "warn_line": "!" * 60,
+        "warn_not_found": "ВНИМАНИЕ: файл не найден: {path}",
+        "warn_no_update": "Позиции и скан НЕ будут обновляться, пока файл не появится.",
+        "warn_check_path": "Проверь путь к игре (папка ue4ss\\Mods\\AFLiveMap).",
+        "addr_pc": "AF LiveMap (этот ПК):  http://127.0.0.1:{port}",
+        "addr_phone": "AF LiveMap (телефон в той же сети):  http://{ip}:{port}",
+        "phone_hint": "Если телефон не открывает: разреши python в брандмауэре Windows (диалог при первом запуске).",
+        "data_path": "Данные: {path}",
+    },
+}
+
+console_lang = "en"
+
+
+def detect_console_lang():
+    """Follow the OS language: Russian locale -> ru, otherwise en."""
+    candidates = [
+        os.environ.get("LC_ALL"), os.environ.get("LC_MESSAGES"),
+        os.environ.get("LANG"),
+    ]
+    try:
+        candidates.append(locale.getlocale()[0])
+        candidates.append(locale.getdefaultlocale()[0])
+    except (ValueError, IndexError):
+        pass
+    for c in candidates:
+        if c and "ru" in c.lower():
+            return "ru"
+    return "en"
+
+
+def sc(key, **params):
+    table = CONSOLE_STRINGS.get(console_lang) or CONSOLE_STRINGS["en"]
+    template = table.get(key) or CONSOLE_STRINGS["en"].get(key) or key
+    return template.format(**params) if params else template
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(ROOT, "..", "web")
@@ -165,8 +223,10 @@ class ScanStore:
             if ratio != 1.0:
                 self._dirty = True  # пересохранить в новом размере ячейки
             total = sum(len(c) for c in self.worlds.values())
-            print(f"Скан загружен: {total} ячеек, миров: {len(self.worlds)}"
-                  + (f" (переквантовано {stored_cell:g} см → {self.CELL:g} см)" if ratio != 1.0 else ""))
+            msg = sc("scan_loaded", total=total, worlds=len(self.worlds))
+            if ratio != 1.0:
+                msg += sc("scan_requantized", old=stored_cell, new=self.CELL)
+            print(msg)
         except (OSError, json.JSONDecodeError, KeyError, IndexError, TypeError, ValueError):
             pass
 
@@ -309,7 +369,7 @@ class WalkedStore:
                 self.worlds[world] = {(c[0], c[1], c[2]): 1 for c in cells}
             self.version = 1
             total = sum(len(c) for c in self.worlds.values())
-            print(f"Прохоженные клетки загружены: {total}")
+            print(sc("walked_loaded", total=total))
         except (OSError, json.JSONDecodeError, KeyError, IndexError, TypeError):
             pass
 
@@ -632,7 +692,7 @@ class Handler(BaseHTTPRequestHandler):
                 if action == "add":
                     waypoint = {
                         "id": str(int(time.time() * 1000)),
-                        "name": str(payload.get("name") or "Точка")[:64],
+                        "name": str(payload.get("name") or "Marker")[:64],
                         "world": payload.get("world") or "unknown",
                         "x": float(payload.get("x", 0)),
                         "y": float(payload.get("y", 0)),
@@ -647,7 +707,7 @@ class Handler(BaseHTTPRequestHandler):
                     save_waypoints(waypoints)
                     self._send_json({"ok": True})
                 elif action == "rename":
-                    if rename_in(waypoints, payload.get("id"), str(payload.get("name") or "Точка")):
+                    if rename_in(waypoints, payload.get("id"), str(payload.get("name") or "Marker")):
                         save_waypoints(waypoints)
                     self._send_json({"ok": True})
                 else:
@@ -666,11 +726,11 @@ class Handler(BaseHTTPRequestHandler):
                 if action == "add":
                     stops = sorted(float(z) for z in payload.get("stops") or [])
                     if len(stops) < 2:
-                        self._send_json({"error": "нужно минимум 2 остановки"}, 400)
+                        self._send_json({"error": "at least 2 stops required"}, 400)
                         return
                     elevator = {
                         "id": str(int(time.time() * 1000)),
-                        "name": str(payload.get("name") or "Лифт")[:64],
+                        "name": str(payload.get("name") or "Elevator")[:64],
                         "world": payload.get("world") or "unknown",
                         "x": float(payload.get("x", 0)),
                         "y": float(payload.get("y", 0)),
@@ -690,7 +750,7 @@ class Handler(BaseHTTPRequestHandler):
                     scan_store.set_elevators(elevators)
                     self._send_json({"ok": True})
                 elif action == "rename":
-                    if rename_in(elevators, payload.get("id"), str(payload.get("name") or "Лифт")):
+                    if rename_in(elevators, payload.get("id"), str(payload.get("name") or "Elevator")):
                         save_elevators(elevators)
                         scan_store.set_elevators(elevators)
                     self._send_json({"ok": True})
@@ -731,7 +791,7 @@ class Handler(BaseHTTPRequestHandler):
                     else:
                         portal = {
                             "id": str(int(time.time() * 1000)),
-                            "name": str(payload.get("name") or "Портал")[:64],
+                            "name": str(payload.get("name") or "Portal")[:64],
                             "count": 1,
                             "from": {"world": src.get("world") or "unknown",
                                      "x": float(src.get("x", 0)), "y": float(src.get("y", 0)),
@@ -748,14 +808,14 @@ class Handler(BaseHTTPRequestHandler):
                     save_portals_data(data)
                     self._send_json({"ok": True})
                 elif action == "rename":
-                    if (rename_in(portals, payload.get("id"), str(payload.get("name") or "Портал"))
-                            or rename_in(data["ignore"], payload.get("id"), str(payload.get("name") or "Зона"))):
+                    if (rename_in(portals, payload.get("id"), str(payload.get("name") or "Portal"))
+                            or rename_in(data["ignore"], payload.get("id"), str(payload.get("name") or "Zone"))):
                         save_portals_data(data)
                     self._send_json({"ok": True})
                 elif action == "add_ignore":
                     zone = {
                         "id": str(int(time.time() * 1000)),
-                        "name": str(payload.get("name") or "База")[:64],
+                        "name": str(payload.get("name") or "Base")[:64],
                         "world": payload.get("world") or "unknown",
                         "x": float(payload.get("x", 0)),
                         "y": float(payload.get("y", 0)),
@@ -791,11 +851,11 @@ class Handler(BaseHTTPRequestHandler):
                 if action == "add":
                     path_points = payload.get("path") or []
                     if len(path_points) < 2:
-                        self._send_json({"error": "слишком короткий путь"}, 400)
+                        self._send_json({"error": "path too short"}, 400)
                         return
                     cart = {
                         "id": str(int(time.time() * 1000)),
-                        "name": str(payload.get("name") or "Тележка")[:64],
+                        "name": str(payload.get("name") or "Cart")[:64],
                         "world": payload.get("world") or "unknown",
                         "path": [[float(p[0]), float(p[1]), float(p[2])] for p in path_points],
                     }
@@ -808,7 +868,7 @@ class Handler(BaseHTTPRequestHandler):
                     save_carts(carts)
                     self._send_json({"ok": True})
                 elif action == "rename":
-                    if rename_in(carts, payload.get("id"), str(payload.get("name") or "Тележка")):
+                    if rename_in(carts, payload.get("id"), str(payload.get("name") or "Cart")):
                         save_carts(carts)
                     self._send_json({"ok": True})
                 else:
@@ -868,19 +928,25 @@ class QuietHTTPServer(ThreadingHTTPServer):
 
 
 def main():
+    global console_lang
     parser = argparse.ArgumentParser(description="AF LiveMap server")
-    parser.add_argument("--data", required=True, help="Путь к livemap.json, который пишет UE4SS-мод")
+    parser.add_argument("--data", required=True,
+                        help="Path to livemap.json written by the UE4SS mod")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--host", default="0.0.0.0",
-                        help="0.0.0.0 — доступ из локальной сети (телефон), 127.0.0.1 — только этот ПК")
+                        help="0.0.0.0 = reachable from the local network (phone), 127.0.0.1 = this PC only")
+    parser.add_argument("--lang", default="auto", choices=["auto", "en", "ru"],
+                        help="Console language: auto (from OS locale), en, ru")
     args = parser.parse_args()
 
+    console_lang = detect_console_lang() if args.lang == "auto" else args.lang
+
     if not os.path.isfile(args.data):
-        print("!" * 60)
-        print(f"ВНИМАНИЕ: файл не найден: {args.data}")
-        print("Позиции и скан НЕ будут обновляться, пока файл не появится.")
-        print("Проверь путь к игре (папка ue4ss\\Mods\\AFLiveMap).")
-        print("!" * 60)
+        print(sc("warn_line"))
+        print(sc("warn_not_found", path=args.data))
+        print(sc("warn_no_update"))
+        print(sc("warn_check_path"))
+        print(sc("warn_line"))
 
     global watcher, scan_store, walked_store
     watcher = DataWatcher(args.data)
@@ -900,7 +966,7 @@ def main():
     walked_store = WalkedStore(os.path.join(persist_dir, "walked.json"))
 
     server = QuietHTTPServer((args.host, args.port), Handler)
-    print(f"AF LiveMap (этот ПК): http://127.0.0.1:{args.port}")
+    print(sc("addr_pc", port=args.port))
     if args.host == "0.0.0.0":
         import socket
         try:
@@ -908,11 +974,11 @@ def main():
             probe.connect(("8.8.8.8", 80))
             lan_ip = probe.getsockname()[0]
             probe.close()
-            print(f"AF LiveMap (телефон в той же сети): http://{lan_ip}:{args.port}")
-            print("Если телефон не открывает: разреши python в брандмауэре Windows (диалог при первом запуске).")
+            print(sc("addr_phone", ip=lan_ip, port=args.port))
+            print(sc("phone_hint"))
         except OSError:
             pass
-    print(f"Данные: {args.data}")
+    print(sc("data_path", path=args.data))
     try:
         server.serve_forever()
     except KeyboardInterrupt:

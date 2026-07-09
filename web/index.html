@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <title>AF LiveMap</title>
@@ -9,41 +9,46 @@
 <body>
 <div id="topbar">
   <span id="logo">AF LiveMap</span>
-  <select id="worldSelect" title="Мир"></select>
-  <label><input type="checkbox" id="followToggle" checked> Следовать</label>
-  <label><input type="checkbox" id="trailToggle" checked> След</label>
+  <select id="worldSelect" data-i18n-title="world_title"></select>
+  <label><input type="checkbox" id="followToggle" checked> <span data-i18n="follow"></span></label>
+  <label><input type="checkbox" id="trailToggle" checked> <span data-i18n="trail"></span></label>
   <button id="view3dBtn">3D</button>
-  <button id="addWaypointBtn" title="Поставить точку на месте игрока">+ Точка</button>
-  <button id="elevatorBtn" title="Записать лифт: нажми в кабине, прокатись по всем этажам, нажми ещё раз">Лифт</button>
-  <button id="cartBtn" title="Записать тележку: нажми сев в неё, доедь до конца, нажми ещё раз">Тележка</button>
-  <button id="waypointsBtn">Точки</button>
-  <button id="imagesBtn">Карты</button>
-  <button id="notesBtn">Заметки</button>
-  <span id="status" class="status-wait">ожидание…</span>
+  <button id="addWaypointBtn" data-i18n="add_waypoint" data-i18n-title="add_waypoint_title"></button>
+  <button id="elevatorBtn" data-i18n="elevator" data-i18n-title="elevator_title"></button>
+  <button id="cartBtn" data-i18n="cart" data-i18n-title="cart_title"></button>
+  <button id="waypointsBtn" data-i18n="waypoints_btn"></button>
+  <button id="imagesBtn" data-i18n="images_btn"></button>
+  <button id="notesBtn" data-i18n="notes_btn"></button>
+  <select id="langSelect" data-i18n-title="lang_title">
+    <option value="en">EN</option>
+    <option value="ru">RU</option>
+  </select>
+  <span id="status" class="status-wait" data-i18n="status_waiting"></span>
 </div>
 <div id="waypointPanel" class="hidden">
   <div id="waypointList"></div>
-  <button id="noPortalBtn" title="Телепорты в эту зону не будут записываться как порталы">🚫 Зона «не портал» здесь</button>
+  <button id="noPortalBtn" data-i18n="no_portal_btn" data-i18n-title="no_portal_title"></button>
   <div id="routeStatus"></div>
 </div>
 <div id="notesPopup" class="hidden">
   <div id="notesHeader">
     <span id="notesStatus"></span>
-    <button id="notesClose">Закрыть</button>
+    <button id="notesClose" data-i18n="close"></button>
   </div>
-  <textarea id="notesText" placeholder="Заметки: координаты, планы, что где лежит… Сохраняются на сервере и видны с ПК и телефона." spellcheck="false"></textarea>
+  <textarea id="notesText" data-i18n-placeholder="notes_placeholder" spellcheck="false"></textarea>
 </div>
 <div id="imagesPopup" class="hidden">
   <div id="imagesHeader">
     <select id="imageSelect"></select>
-    <button id="imagesClose">Закрыть</button>
+    <button id="imagesClose" data-i18n="close"></button>
   </div>
-  <div id="imageWrap"><img id="imageView" alt="Карта сектора"></div>
+  <div id="imageWrap"><img id="imageView" data-i18n-alt="image_alt"></div>
 </div>
 <canvas id="map"></canvas>
 <canvas id="map3d" class="hidden"></canvas>
 <canvas id="hud3d" class="hidden"></canvas>
 <div id="coords"></div>
+<script src="i18n.js"></script>
 <script src="view3d.js"></script>
 <script src="app.js"></script>
 </body>
