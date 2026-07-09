@@ -396,7 +396,15 @@ function makeRow(list, labelText, jumpPos, buttons, key) {
   name.className = "wp-name";
   name.title = t("show_on_map");
   name.textContent = labelText;
-  name.onclick = () => jumpTo(jumpPos.x, jumpPos.y, jumpPos.z);
+  // Клик по строке: подсветить элемент на карте (симметрия с кликом по карте) + центрировать
+  name.onclick = () => {
+    jumpTo(jumpPos.x, jumpPos.y, jumpPos.z);
+    if (key) {
+      const i = key.indexOf(":");
+      state.selected = { type: key.slice(0, i), id: key.slice(i + 1) };
+      applyRowSelection();
+    }
+  };
   row.appendChild(name);
   for (const btn of buttons) row.appendChild(btn);
   list.appendChild(row);
