@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="2000" viewBox="0 0 2000 2000">
+  <rect width="2000" height="2000" fill="#161b22"/>
+  <g stroke="#30363d" stroke-width="1">
+    <path d="M0 100H2000 M0 200H2000 M0 300H2000 M0 400H2000 M0 500H2000 M0 600H2000 M0 700H2000 M0 800H2000 M0 900H2000 M0 1000H2000 M0 1100H2000 M0 1200H2000 M0 1300H2000 M0 1400H2000 M0 1500H2000 M0 1600H2000 M0 1700H2000 M0 1800H2000 M0 1900H2000"/>
+    <path d="M100 0V2000 M200 0V2000 M300 0V2000 M400 0V2000 M500 0V2000 M600 0V2000 M700 0V2000 M800 0V2000 M900 0V2000 M1000 0V2000 M1100 0V2000 M1200 0V2000 M1300 0V2000 M1400 0V2000 M1500 0V2000 M1600 0V2000 M1700 0V2000 M1800 0V2000 M1900 0V2000"/>
+  </g>
+  <g stroke="#484f58" stroke-width="2">
+    <path d="M0 1000H2000 M1000 0V2000"/>
+  </g>
+  <text x="1010" y="990" fill="#8b949e" font-family="sans-serif" font-size="24">0,0</text>
+  <text x="1000" y="60" fill="#8b949e" font-family="sans-serif" font-size="32" text-anchor="middle">Placeholder — замени на реальную карту сектора (maps/*.png)</text>
+</svg>
