@@ -279,27 +279,48 @@ local function CollectPositions()
 end
 
 -- ==================== Rat Scanner detection ====================
--- The held item is the pawn's direct ItemInHand_BP property. We compare its
--- blueprint class name against the config substring. If require_rat_scanner
--- is false, this check is never called at all.
+-- The held item is the pawn's direct ItemInHand_BP property. Many AF items
+-- share one blueprint class and differ only by their data-table RowName, so we
+-- match the config substring against several identifiers: the class name, the
+-- actor full name AND the item's RowName. If require_rat_scanner is false this
+-- check is never called at all.
 
 local heldItemLogThrottle = 0
+
+-- Collect every identifier string of the currently held item (each guarded,
+-- so a missing property never breaks the others).
+local function HeldItemIds(pawn)
+    local ids = {}
+    local item = pawn.ItemInHand_BP
+    if not item or not item:IsValid() then return ids end
+    pcall(function() ids[#ids + 1] = item:GetClass():GetFullName() end)
+    pcall(function() ids[#ids + 1] = item:GetFullName() end)
+    pcall(function() ids[#ids + 1] = item.ItemDataRow.RowName:ToString() end)
+    pcall(function() ids[#ids + 1] = item.ItemData.ItemName:ToString() end)
+    return ids
+end
+
+local function MaybeLogHeldItem(ids)
+    if not LOG_HELD_ITEM then return end
+    heldItemLogThrottle = heldItemLogThrottle + 1
+    if heldItemLogThrottle < 20 then return end -- ~every 2s at 100ms tick
+    heldItemLogThrottle = 0
+    if #ids > 0 then
+        Log(T("held_item", table.concat(ids, "  |  ")))
+    else
+        Log(T("held_item", "<nothing in hand / not readable>"))
+    end
+end
 
 local function IsHoldingScanner(pawn)
     local match = false
     pcall(function()
-        local item = pawn.ItemInHand_BP
-        if item and item:IsValid() then
-            local className = item:GetClass():GetFullName()
-            if LOG_HELD_ITEM then
-                heldItemLogThrottle = heldItemLogThrottle + 1
-                if heldItemLogThrottle >= 20 then -- ~every 2s at 100ms tick
-                    heldItemLogThrottle = 0
-                    Log(T("held_item", tostring(className)))
-                end
-            end
-            if className:lower():find(SCANNER_ITEM_MATCH, 1, true) then
+        local ids = HeldItemIds(pawn)
+        MaybeLogHeldItem(ids)
+        for _, id in ipairs(ids) do
+            if id:lower():find(SCANNER_ITEM_MATCH, 1, true) then
                 match = true
+                return
             end
         end
     end)
