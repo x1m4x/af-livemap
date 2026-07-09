@@ -396,14 +396,13 @@ function makeRow(list, labelText, jumpPos, buttons, key) {
   name.className = "wp-name";
   name.title = t("show_on_map");
   name.textContent = labelText;
-  // Клик по строке: подсветить элемент на карте (симметрия с кликом по карте) + центрировать
+  // Клик по строке: подсветить на карте + прыжок; повторный клик — к следующему концу
   name.onclick = () => {
-    jumpTo(jumpPos.x, jumpPos.y, jumpPos.z);
     if (key) {
       const i = key.indexOf(":");
-      state.selected = { type: key.slice(0, i), id: key.slice(i + 1) };
-      applyRowSelection();
-      updateSelection3d();
+      selectMapItem(key.slice(0, i), key.slice(i + 1));
+    } else {
+      jumpTo(jumpPos.x, jumpPos.y, jumpPos.z);
     }
   };
   row.appendChild(name);
@@ -635,8 +634,74 @@ function updateSelection3d() {
   View3D.clearSelectionLink();
 }
 
-function selectMapItem(type, id) {
-  state.selected = { type, id };
+// Все «концы» элемента (портал: вход/выход, тележка: начало/конец,
+// лифт: этажи). Повторный клик перескакивает между ними.
+function elementEndpoints(type, id) {
+  if (type === "portal") {
+    const p = state.portals.find(x => x.id === id);
+    if (!p) return [];
+    return [
+      { world: p.from.world, x: p.from.x, y: p.from.y, z: p.from.z },
+      { world: p.to.world, x: p.to.x, y: p.to.y, z: p.to.z },
+    ];
+  }
+  if (type === "cart") {
+    const c = state.carts.find(x => x.id === id);
+    if (!c) return [];
+    const f = c.path[0], l = c.path[c.path.length - 1];
+    return [
+      { world: c.world, x: f[0], y: f[1], z: f[2] },
+      { world: c.world, x: l[0], y: l[1], z: l[2] },
+    ];
+  }
+  if (type === "elevator") {
+    const e = state.elevators.find(x => x.id === id);
+    return e ? e.stops.map(z => ({ world: state.viewedWorld, x: e.x, y: e.y, z })) : [];
+  }
+  if (type === "wp") {
+    const w = state.waypoints.find(x => x.id === id);
+    return w ? [{ world: w.world, x: w.x, y: w.y, z: w.z }] : [];
+  }
+  if (type === "zone") {
+    const z = state.portalIgnore.find(x => x.id === id);
+    return z ? [{ world: z.world, x: z.x, y: z.y, z: z.z }] : [];
+  }
+  return [];
+}
+
+function jumpToEndpoint(ep) {
+  if (!ep) return;
+  if (ep.world && ep.world !== state.viewedWorld) {
+    switchViewedWorld(ep.world); // другой мир (кроссмировой портал) — переключаемся
+  }
+  jumpTo(ep.x, ep.y, ep.z);
+}
+
+// Выбрать элемент; повторный клик по уже выбранному — прыжок к следующему концу.
+// screenPos (px экрана) при клике по карте: свежий выбор идёт к ближайшему концу.
+function selectMapItem(type, id, screenPos) {
+  const eps = elementEndpoints(type, id);
+  const same = state.selected.type === type && state.selected.id === id;
+
+  if (same && eps.length > 1) {
+    state.selected.idx = ((state.selected.idx || 0) + 1) % eps.length;
+    jumpToEndpoint(eps[state.selected.idx]);
+  } else {
+    let idx = 0;
+    if (screenPos && eps.length > 1) {
+      // ближайший к клику конец, чтобы следующий клик увёл к другому
+      let best = Infinity;
+      eps.forEach((ep, i) => {
+        const s = worldScreen(ep.x, ep.y);
+        const d = Math.hypot(s.x - screenPos.x, s.y - screenPos.y);
+        if (d < best) { best = d; idx = i; }
+      });
+    } else if (eps.length) {
+      jumpToEndpoint(eps[0]); // выбор из списка — сразу к первому концу
+    }
+    state.selected = { type, id, idx };
+  }
+
   const panel = document.getElementById("waypointPanel");
   positionWaypointPanel();
   panel.classList.remove("hidden");
@@ -656,7 +721,7 @@ function clearMapSelection() {
 function handleMapClick(sx, sy) {
   const hit = hitTestMap(sx, sy);
   if (hit) {
-    selectMapItem(hit.type, hit.id);
+    selectMapItem(hit.type, hit.id, { x: sx, y: sy });
   } else {
     clearMapSelection();
   }
