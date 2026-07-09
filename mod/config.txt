@@ -1,28 +1,42 @@
 # ============================================================
-#  AF LiveMap — конфиг мода
-#  Формат: ключ = значение. Строки с # игнорируются.
-#  После изменения перезапусти игру (или мод через UE4SS).
+#  AF LiveMap - mod config / конфиг мода
+#  Format / формат: key = value.  Lines starting with # are ignored.
+#  Restart the game after editing / после изменения перезапусти игру.
 # ============================================================
 
+# Scan the map only while holding the "Rat Scanner" item.
 # Сканировать карту только когда в руке предмет "Rat Scanner".
-#   true  — карта строится, лишь пока держишь Rat Scanner (по умолчанию).
-#   false — сканирование работает всегда, предмет не нужен.
+#   true  - map builds only while you hold the Rat Scanner (default).
+#           карта строится, лишь пока держишь Rat Scanner (по умолчанию).
+#   false - scanning always works, no item needed.
+#           сканирование работает всегда, предмет не нужен.
 require_rat_scanner = true
 
+# Substring of the held item's class name to identify the scanner (case-insensitive).
 # Подстрока имени предмета в руке для опознания сканера (регистр не важен).
-# Меняй, только если детект не срабатывает: включи log_held_item = true,
-# возьми Rat Scanner в руку, посмотри имя в UE4SS-консоли и впиши сюда.
+# Change only if detection fails (see log_held_item below).
+# Меняй только если детект не срабатывает (см. log_held_item ниже).
 scanner_item_match = ratscanner
 
+# Diagnostics: print the held item's name to the UE4SS console (~every 2s).
 # Диагностика: печатать имя предмета в руке в консоль UE4SS (раз в ~2 сек).
-# Нужно только чтобы узнать точное scanner_item_match. Потом верни false.
+# Use it to find the correct scanner_item_match, then set back to false.
+# Нужно чтобы узнать точное scanner_item_match, потом верни false.
 log_held_item = false
 
-# Полностью выключить лидар-сканирование (позиции игроков всё равно пишутся).
+# Language of mod log messages: auto | en | ru
+# Язык сообщений мода в логе: auto | en | ru
+#   auto - follow the game's language / по языку игры (default / по умолчанию)
+language = auto
+
+# Fully disable lidar scanning (player positions are still written).
+# Полностью выключить лидар (позиции игроков всё равно пишутся).
 scan_enabled = true
 
-# Лучей за тик (нагрузка). Больше — быстрее карта, но выше нагрузка. По умолч. 12.
+# Rays per tick (load). More = faster map, higher load. Default 12.
+# Лучей за тик (нагрузка). Больше - быстрее карта, выше нагрузка. По умолч. 12.
 scan_rays = 12
 
+# Ray range in centimeters (100 cm = 1 m). Default 6000 (60 m).
 # Дальность луча в сантиметрах (100 см = 1 м). По умолчанию 6000 (60 м).
 scan_range_cm = 6000

@@ -1,5 +1,5 @@
 {
-  "_comment": "Скопируй в maps.json и добавь свои картинки секторов в папку maps/. Скан-карта (2D/3D) работает и без картинок — попап «Карты» просто останется пустым.",
+  "_comment": "Copy to maps.json and add your own sector images into maps/. The scan map (2D/3D) works without images — the 'Maps' popup just stays empty.",
   "maps": [
     {
       "id": "placeholder",

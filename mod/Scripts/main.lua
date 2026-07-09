@@ -1,57 +1,121 @@
--- AFLiveMap: пишет позиции игроков и лидар-скан в JSON-файлы для локальной live-карты.
--- Устанавливается в: <игра>\AbioticFactor\Binaries\Win64\ue4ss\Mods\AFLiveMap\Scripts\main.lua
--- Читается сервером: server/server.py --data <путь к livemap.json>
+-- AFLiveMap: writes player positions and a lidar scan to JSON files for the
+-- local live map.
+-- Install to: <game>\AbioticFactor\Binaries\Win64\ue4ss\Mods\AFLiveMap\Scripts\main.lua
+-- Read by the server: server/server.py --data <path to livemap.json>
 --
--- Производительность: в игровом потоке выполняется только сбор данных
--- (несколько трейсов и чтение позиций), кодирование JSON и запись файлов
--- происходят в фоновом потоке LoopAsync — игровые кадры не блокируются диском.
+-- Performance: the game thread only does light data gathering (a few traces
+-- and reading positions); JSON encoding and file writes happen on the
+-- background LoopAsync thread so game frames are never blocked by disk I/O.
 
 local UEHelpers = require("UEHelpers")
 
--- ==================== Настройки по умолчанию ====================
--- Значения ниже — дефолты. Их можно переопределить, не трогая код, в файле
--- config.txt рядом с этим модом (см. секцию «Конфиг» ниже).
+-- ==================== Default settings ====================
+-- Values below are defaults. Override them without touching code via the
+-- config.txt file next to this mod (see the "Config" section below).
 
--- Интервал тика, мс. Чаще, но с малой порцией работы — вместо редких тяжёлых пиков.
+-- Tick interval, ms. Frequent but tiny work — instead of rare heavy spikes.
 local INTERVAL_MS = 100
 
--- Файлы вывода. Относительный путь считается от <игра>\AbioticFactor\Binaries\Win64\
+-- Output files. Relative path is resolved from <game>\...\Binaries\Win64\
 local MOD_DIR = "ue4ss\\Mods\\AFLiveMap\\"
 local OUTPUT_FILE = MOD_DIR .. "livemap.json"
 local SCAN_FILE = MOD_DIR .. "lidar.json"
 local CONFIG_FILE = MOD_DIR .. "config.txt"
 
--- Класс пешки игрока в Abiotic Factor (blueprint-класс персонажа)
+-- Player pawn blueprint class in Abiotic Factor
 local PLAYER_CLASS = "Abiotic_PlayerCharacter_C"
 
--- Лидар: лучей за тик. 12 x 10 тик/с = 120 лучей/с, размазанных по кадрам.
+-- Lidar: rays per tick. 12 x 10 ticks/s = 120 rays/s spread across frames.
 local SCAN_ENABLED = true
 local SCAN_RAYS = 12
-local SCAN_RANGE = 6000.0       -- дальность луча, см (60 м)
-local SCAN_MIN_DISTANCE = 60.0  -- ближе — своё тело/предмет в руках, шум
+local SCAN_RANGE = 6000.0       -- ray range, cm (60 m)
+local SCAN_MIN_DISTANCE = 60.0  -- closer than this = own body/held item, noise
 
--- Привязка сканирования к предмету Rat Scanner.
--- require_rat_scanner = true  → карта строится ТОЛЬКО когда держишь Rat Scanner в руке.
--- require_rat_scanner = false → сканирование работает всегда, без предмета.
+-- Gate scanning behind the Rat Scanner item.
+-- require_rat_scanner = true  -> map is built ONLY while holding the Rat Scanner.
+-- require_rat_scanner = false -> scanning always works, no item required.
 local REQUIRE_RAT_SCANNER = true
--- Подстрока имени предмета в руке для опознания сканера (регистр игнорируется).
+-- Substring of the held item's class name to identify the scanner (case-insensitive).
 local SCANNER_ITEM_MATCH = "ratscanner"
--- Диагностика: печатать в консоль имя предмета в руке (чтобы узнать точное имя
--- для scanner_item_match, если детект не срабатывает). Включается в config.txt.
+-- Diagnostics: print the held item's name to the console (to discover the exact
+-- name for scanner_item_match if detection fails). Toggled in config.txt.
 local LOG_HELD_ITEM = false
 
--- Обновление кэша пешек (FindAllOf — дорогой, не зовём каждый тик), в тиках
-local CACHE_REFRESH_TICKS = 30  -- раз в ~3 секунды
+-- UI/log language: "auto" (from game), "en", or "ru".
+local LANGUAGE = "auto"
 
--- ===============================================================
+-- Pawn cache refresh (FindAllOf is costly, not called every tick), in ticks
+local CACHE_REFRESH_TICKS = 30  -- about every 3 seconds
+
+-- ==========================================================
+
+-- ==================== Localization ====================
+
+local STRINGS = {
+    en = {
+        config_not_found = "config.txt not found - using default settings",
+        config_loaded    = "config.txt loaded: require_rat_scanner=%s, match='%s', language=%s",
+        mod_loaded       = "Mod loaded: tick %d ms, lidar %d rays/tick, %s",
+        scan_gated       = "scanning only while holding the Rat Scanner",
+        scan_always      = "scanning always on",
+        lidar_error      = "Lidar not working: %s",
+        held_item        = "Item in hand: %s",
+        collect_error    = "Collection error: %s",
+    },
+    ru = {
+        config_not_found = "config.txt не найден - работают настройки по умолчанию",
+        config_loaded    = "config.txt загружен: require_rat_scanner=%s, match='%s', language=%s",
+        mod_loaded       = "Мод загружен: тик %d мс, лидар %d лучей/тик, %s",
+        scan_gated       = "скан только с Rat Scanner в руке",
+        scan_always      = "скан всегда включён",
+        lidar_error      = "Лидар не работает: %s",
+        held_item        = "Предмет в руке: %s",
+        collect_error    = "Ошибка сбора: %s",
+    },
+}
+
+local activeLang = "en"
+
+local function T(id, ...)
+    local template = (STRINGS[activeLang] and STRINGS[activeLang][id]) or STRINGS.en[id] or id
+    if select("#", ...) > 0 then
+        return string.format(template, ...)
+    end
+    return template
+end
 
 local function Log(message)
     print(string.format("[AFLiveMap] %s\n", message))
 end
 
--- ==================== Конфиг ====================
--- Простой текстовый config.txt формата key=value рядом с модом. Отсутствие
--- файла — не ошибка: работают дефолты выше. Игрок редактирует только config.txt.
+-- Detect the game's current language via the engine's internationalization
+-- library. Returns a culture string like "en", "ru-RU", or nil on failure.
+local function DetectGameLanguage()
+    local detected = nil
+    pcall(function()
+        local lib = StaticFindObject("/Script/Engine.Default__KismetInternationalizationLibrary")
+        if lib and lib:IsValid() then
+            local culture = lib:GetCurrentLanguage()
+            if culture then detected = tostring(culture) end
+        end
+    end)
+    return detected
+end
+
+local function ResolveLanguage()
+    local choice = (LANGUAGE or "auto"):lower()
+    if choice == "en" or choice == "ru" then
+        activeLang = choice
+        return
+    end
+    -- "auto" (or anything unknown): follow the game language, default to English
+    local game = DetectGameLanguage()
+    activeLang = (game and game:lower():find("ru", 1, true)) and "ru" or "en"
+end
+
+-- ==================== Config ====================
+-- Plain key=value config.txt next to the mod. A missing file is not an error:
+-- the defaults above apply. Players edit only config.txt.
 
 local function ParseBool(value, fallback)
     value = value:lower()
@@ -63,7 +127,8 @@ end
 local function LoadConfig()
     local file = io.open(CONFIG_FILE, "r")
     if not file then
-        Log("config.txt не найден — работают настройки по умолчанию")
+        ResolveLanguage()
+        Log(T("config_not_found"))
         return
     end
     for line in file:lines() do
@@ -82,17 +147,19 @@ local function LoadConfig()
                 SCAN_RANGE = tonumber(value) or SCAN_RANGE
             elseif key == "log_held_item" then
                 LOG_HELD_ITEM = ParseBool(value, LOG_HELD_ITEM)
+            elseif key == "language" then
+                if #value > 0 then LANGUAGE = value:lower() end
             end
         end
     end
     file:close()
-    Log(string.format("config.txt загружен: require_rat_scanner=%s, match='%s'",
-        tostring(REQUIRE_RAT_SCANNER), SCANNER_ITEM_MATCH))
+    ResolveLanguage()
+    Log(T("config_loaded", tostring(REQUIRE_RAT_SCANNER), SCANNER_ITEM_MATCH, activeLang))
 end
 
 LoadConfig()
 
--- Минимальный JSON-энкодер: достаточно чисел, строк, bool, массивов и объектов
+-- Minimal JSON encoder: numbers, strings, bool, arrays and objects are enough
 local function JsonEncode(value)
     local t = type(value)
     if t == "number" then
@@ -126,13 +193,13 @@ local function JsonEncode(value)
     return "null"
 end
 
--- ==================== Кэш пешек ====================
--- FindAllOf, имена игроков и имя мира обновляются редко;
--- каждый тик читаются только позиции.
+-- ==================== Pawn cache ====================
+-- FindAllOf, player names and the world name change rarely;
+-- only positions are read every tick.
 
-local pawnCache = {}   -- массив {pawn, name, isLocal}
+local pawnCache = {}   -- array of {pawn, name, isLocal}
 local worldName = "unknown"
-local ticksSinceRefresh = 1000 -- обновить на первом же тике
+local ticksSinceRefresh = 1000 -- refresh on the very first tick
 
 local function GetPlayerName(pawn, fallback)
     local name = fallback
@@ -180,7 +247,7 @@ local function RefreshPawnCache()
     end
 end
 
--- ==================== Сбор позиций ====================
+-- ==================== Position collection ====================
 
 local function CollectPositions()
     local players = {}
@@ -211,10 +278,10 @@ local function CollectPositions()
     return { world = worldName, players = players }
 end
 
--- ==================== Опознание Rat Scanner ====================
--- Предмет в руке — прямое свойство пешки ItemInHand_BP. Сверяем имя его
--- blueprint-класса с подстрокой из конфига. Если require_rat_scanner=false,
--- проверка не вызывается вовсе.
+-- ==================== Rat Scanner detection ====================
+-- The held item is the pawn's direct ItemInHand_BP property. We compare its
+-- blueprint class name against the config substring. If require_rat_scanner
+-- is false, this check is never called at all.
 
 local heldItemLogThrottle = 0
 
@@ -226,9 +293,9 @@ local function IsHoldingScanner(pawn)
             local className = item:GetClass():GetFullName()
             if LOG_HELD_ITEM then
                 heldItemLogThrottle = heldItemLogThrottle + 1
-                if heldItemLogThrottle >= 20 then -- ~раз в 2 сек при тике 100 мс
+                if heldItemLogThrottle >= 20 then -- ~every 2s at 100ms tick
                     heldItemLogThrottle = 0
-                    Log("Предмет в руке: " .. tostring(className))
+                    Log(T("held_item", tostring(className)))
                 end
             end
             if className:lower():find(SCANNER_ITEM_MATCH, 1, true) then
@@ -239,7 +306,7 @@ local function IsHoldingScanner(pawn)
     return match
 end
 
--- ==================== Лидар ====================
+-- ==================== Lidar ====================
 
 local kismetSystemLibrary = nil
 
@@ -250,8 +317,8 @@ local function GetKSL()
     return kismetSystemLibrary
 end
 
--- Глобальная золотая спираль: rayIndex растёт бесконечно, направления
--- равномерно покрывают сферу на любом окне времени.
+-- Global golden spiral: rayIndex grows forever, directions evenly cover the
+-- sphere over any time window.
 local GOLDEN_ANGLE = math.pi * (3.0 - math.sqrt(5.0))
 local SPIRAL_PERIOD = 240
 local rayIndex = 0
@@ -308,16 +375,16 @@ local function CollectLidar(localPawn)
     end
 
     if #points == 0 then return nil end
-    -- origin нужен серверу для «вырезания» пустоты вдоль лучей (перегенерация)
+    -- origin lets the server "carve" empty space along the rays (regeneration)
     return {
         origin = { math.floor(origin.X + 0.5), math.floor(origin.Y + 0.5), math.floor(origin.Z + 0.5) },
         points = points,
     }
 end
 
--- ==================== Главный цикл ====================
--- Игровой поток только заполняет pendingState/pendingLidar (сырые таблицы),
--- фоновый поток LoopAsync кодирует JSON и пишет файлы.
+-- ==================== Main loop ====================
+-- The game thread only fills pendingState/pendingLidar (raw tables); the
+-- LoopAsync background thread encodes JSON and writes the files.
 
 local pendingState = nil
 local pendingLidar = nil
@@ -345,7 +412,7 @@ local function CollectOnGameThread()
         if not localEntry and pawnCache[1] and pawnCache[1].pawn:IsValid() then
             localEntry = pawnCache[1]
         end
-        -- Гейт по предмету: сканируем только с Rat Scanner в руке (если включено)
+        -- Item gate: scan only while holding the Rat Scanner (if enabled)
         local allowScan = localEntry ~= nil
         if allowScan and REQUIRE_RAT_SCANNER then
             allowScan = IsHoldingScanner(localEntry.pawn)
@@ -356,10 +423,10 @@ local function CollectOnGameThread()
                 pendingLidar = result
             elseif not lidarErrorLogged then
                 lidarErrorLogged = true
-                Log("Лидар не работает: " .. tostring(result))
+                Log(T("lidar_error", tostring(result)))
             end
         elseif LOG_HELD_ITEM and localEntry then
-            -- Дать диагностике имени предмета работать даже когда скан выключен гейтом
+            -- Keep the held-item diagnostic working even when the gate blocks scanning
             IsHoldingScanner(localEntry.pawn)
         end
     end
@@ -372,12 +439,11 @@ local function WriteFile(path, content)
     file:close()
 end
 
-Log(string.format("Мод загружен: тик %d мс, лидар %d лучей/тик, %s",
-    INTERVAL_MS, SCAN_RAYS,
-    REQUIRE_RAT_SCANNER and "скан только с Rat Scanner в руке" or "скан всегда включён"))
+Log(T("mod_loaded", INTERVAL_MS, SCAN_RAYS,
+    REQUIRE_RAT_SCANNER and T("scan_gated") or T("scan_always")))
 
 LoopAsync(INTERVAL_MS, function()
-    -- 1. Фоновый поток: кодируем и пишем то, что собрал предыдущий тик
+    -- 1. Background thread: encode and write what the previous tick gathered
     if pendingState then
         stateSeq = stateSeq + 1
         pendingState.seq = stateSeq
@@ -395,12 +461,12 @@ LoopAsync(INTERVAL_MS, function()
         pendingLidar = nil
     end
 
-    -- 2. Игровой поток: лёгкий сбор данных для следующей записи
+    -- 2. Game thread: light data gathering for the next write
     ExecuteInGameThread(function()
         local ok, err = pcall(CollectOnGameThread)
         if not ok then
-            Log("Ошибка сбора: " .. tostring(err))
+            Log(T("collect_error", tostring(err)))
         end
     end)
-    return false -- false = продолжать цикл
+    return false -- false = keep the loop going
 end)
