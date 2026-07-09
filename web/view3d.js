@@ -58,6 +58,9 @@ const View3D = (() => {
   let routeBuffer = null;
   let routeCount = 0;
 
+  let selectionBuffer = null;   // линия связи выбранного элемента (портал/тележка)
+  let selectionCount = 0;
+
   let hudCanvas = null;     // 2D-оверлей для подписей
   let hudCtx = null;
   let lastMvp = null;
@@ -183,6 +186,7 @@ const View3D = (() => {
     playerBuffer = gl.createBuffer();
     waypointBuffer = gl.createBuffer();
     routeBuffer = gl.createBuffer();
+    selectionBuffer = gl.createBuffer();
 
     gl.enable(gl.DEPTH_TEST);
     gl.clearColor(0.05, 0.07, 0.09, 1.0);
@@ -271,6 +275,27 @@ const View3D = (() => {
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
   }
 
+  // Линия связи выбранного элемента (портал вход->выход, путь тележки) в см мира
+  function setSelectionLink(points) {
+    selectionCount = points ? points.length : 0;
+    if (selectionCount === 0) return;
+    const data = new Float32Array(selectionCount * 6);
+    let offset = 0;
+    for (const p of points) {
+      const [px, py, pz] = toGL(p.x, p.y, p.z);
+      data[offset++] = px;
+      data[offset++] = py;
+      data[offset++] = pz + 0.4;
+      data[offset++] = 0.9; data[offset++] = 0.72; data[offset++] = 0.1; // золотой
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, selectionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+  }
+
+  function clearSelectionLink() {
+    selectionCount = 0;
+  }
+
   function setPlayers(players) {
     const data = new Float32Array(players.length * 6);
     let offset = 0;
@@ -324,6 +349,10 @@ const View3D = (() => {
     if (routeCount > 0) {
       drawBuffer(routeBuffer, routeCount, canvas.height * 1.2, 5.0, 0.0);
       gl.drawArrays(gl.LINE_STRIP, 0, routeCount);
+    }
+    if (selectionCount > 0) {
+      drawBuffer(selectionBuffer, selectionCount, canvas.height * 2.0, 10.0, 0.0);
+      gl.drawArrays(gl.LINE_STRIP, 0, selectionCount);
     }
     drawBuffer(waypointBuffer, waypoints.length, canvas.height * 4.0, 16.0, 0.0);
     drawBuffer(playerBuffer, playerCount, canvas.height * 3.0, 14.0, 0.0);
@@ -463,6 +492,8 @@ const View3D = (() => {
     setWaypoints,
     setRoute,
     clearRoute() { routeCount = 0; },
+    setSelectionLink,
+    clearSelectionLink,
     centerOn(x, y, z) {
       camera.target = toGL(x, y, z);
     },

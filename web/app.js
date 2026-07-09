@@ -403,6 +403,7 @@ function makeRow(list, labelText, jumpPos, buttons, key) {
       const i = key.indexOf(":");
       state.selected = { type: key.slice(0, i), id: key.slice(i + 1) };
       applyRowSelection();
+      updateSelection3d();
     }
   };
   row.appendChild(name);
@@ -611,6 +612,29 @@ function hitTestMap(sx, sy) {
   return best;
 }
 
+// Показать связь выбранного элемента в 3D-виде (2D рисует drawSelectionOverlay)
+function updateSelection3d() {
+  if (!view3dReady) return;
+  const sel = state.selected;
+  if (sel.type === "portal") {
+    const p = state.portals.find(x => x.id === sel.id);
+    if (p && p.from.world === state.viewedWorld && p.to.world === state.viewedWorld) {
+      View3D.setSelectionLink([
+        { x: p.from.x, y: p.from.y, z: p.from.z },
+        { x: p.to.x, y: p.to.y, z: p.to.z },
+      ]);
+      return;
+    }
+  } else if (sel.type === "cart") {
+    const c = state.carts.find(x => x.id === sel.id);
+    if (c) {
+      View3D.setSelectionLink(c.path.map(pp => ({ x: pp[0], y: pp[1], z: pp[2] })));
+      return;
+    }
+  }
+  View3D.clearSelectionLink();
+}
+
 function selectMapItem(type, id) {
   state.selected = { type, id };
   const panel = document.getElementById("waypointPanel");
@@ -618,12 +642,14 @@ function selectMapItem(type, id) {
   panel.classList.remove("hidden");
   const row = applyRowSelection();
   if (row) row.scrollIntoView({ block: "nearest" });
+  updateSelection3d();
 }
 
 function clearMapSelection() {
   if (!state.selected.type) return;
   state.selected = { type: null, id: null };
   applyRowSelection();
+  updateSelection3d();
 }
 
 // Клик по карте: выбрать элемент под курсором или снять выбор
@@ -1704,6 +1730,7 @@ document.getElementById("view3dBtn").addEventListener("click", () => {
     rebuildCloud();
     syncView3dMarkers();
     if (state.route.points.length > 0) View3D.setRoute(state.route.points);
+    updateSelection3d();
     const local = state.players.find(p => p.isLocal) || state.players[0];
     if (local && !view3dCentered) {
       View3D.centerOn(local.x, local.y, local.z);

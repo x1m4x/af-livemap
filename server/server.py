@@ -60,11 +60,10 @@ def detect_console_lang():
     """Follow the OS language: Russian locale -> ru, otherwise en."""
     candidates = [
         os.environ.get("LC_ALL"), os.environ.get("LC_MESSAGES"),
-        os.environ.get("LANG"),
+        os.environ.get("LANG"), os.environ.get("LANGUAGE"),
     ]
     try:
         candidates.append(locale.getlocale()[0])
-        candidates.append(locale.getdefaultlocale()[0])
     except (ValueError, IndexError):
         pass
     for c in candidates:
