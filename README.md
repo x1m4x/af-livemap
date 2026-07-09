@@ -19,7 +19,7 @@ No pre-made maps needed: you just walk around and look, and the map reveals itse
 ### 🗺️ Map scanner — point cloud
 - Every tick the mod casts dozens of rays from the camera over a sphere (lidar). Wall hits accumulate into a 50 cm voxel grid.
 - The map builds itself **from looking around** — no need to walk along every wall, just pan the camera.
-- **Self-cleaning:** the server knows what space each ray passed through and erases "ghosts" — junk from moving cars, NPCs and items disappears on its own once you look through where it was.
+- **Purely additive by default:** points are never deleted, so walls never vanish. Optional auto-cleaning of "ghosts" (moving cars/NPCs) can be enabled with the server `--carve` flag.
 - The scan **persists between sessions** and is shared across all devices.
 
 ### 🧭 Two views

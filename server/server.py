@@ -141,9 +141,13 @@ class ScanStore:
     MAX_COUNT = 25   # запас прочности вокселя: сколько «здоровья» копит стена
     CARVE = 1        # на сколько уменьшает счётчик луч, прошедший сквозь воксель
 
-    def __init__(self, lidar_path: str, persist_path: str):
+    def __init__(self, lidar_path: str, persist_path: str, carve: bool = False):
         self.lidar_path = lidar_path
         self.persist_path = persist_path
+        # Карвинг (стирание вокселей вдоль лучей) выключен по умолчанию: скан
+        # чисто накопительный, точки не удаляются — стены не пропадают.
+        # Включается флагом --carve для авто-очистки призраков машин/NPC.
+        self.carve = carve
         # world -> {(gx, gy, gz): [count, version]}
         self.worlds: dict = {}
         self.version = 0
@@ -304,8 +308,9 @@ class ScanStore:
                               int(point[1] // self.CELL),
                               int(point[2] // self.CELL)))
 
-            # 2. Карвинг пустоты вдоль лучей (мимо защищённых вокселей)
-            if origin:
+            # 2. Карвинг пустоты вдоль лучей (мимо защищённых вокселей).
+            #    По умолчанию выключен — точки не удаляются вообще.
+            if self.carve and origin:
                 for point in points:
                     self._carve_ray(cells, origin, point, hit_keys)
 
@@ -957,6 +962,9 @@ def main():
                         help="0.0.0.0 = reachable from the local network (phone), 127.0.0.1 = this PC only")
     parser.add_argument("--lang", default="auto", choices=["auto", "en", "ru"],
                         help="Console language: auto (from OS locale), en, ru")
+    parser.add_argument("--carve", action="store_true",
+                        help="Erase voxels along rays to auto-clean vehicle/NPC ghosts "
+                             "(off by default; scan is purely additive so walls never vanish)")
     args = parser.parse_args()
 
     console_lang = detect_console_lang() if args.lang == "auto" else args.lang
@@ -974,7 +982,7 @@ def main():
     lidar_path = os.path.join(os.path.dirname(os.path.abspath(args.data)), "lidar.json")
     persist_dir = os.path.join(ROOT, "..", "data")
     os.makedirs(persist_dir, exist_ok=True)
-    scan_store = ScanStore(lidar_path, os.path.join(persist_dir, "scan.json"))
+    scan_store = ScanStore(lidar_path, os.path.join(persist_dir, "scan.json"), carve=args.carve)
 
     global waypoints_path, elevators_path, portals_path, carts_path, notes_path
     waypoints_path = os.path.join(persist_dir, "waypoints.json")
