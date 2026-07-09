@@ -58,6 +58,7 @@ const state = {
     lastCalc: 0,
     status: "",
   },
+  selected: { type: null, id: null }, // выбранный на карте элемент (подсветка + связь)
 };
 
 // ==================== Преобразования ====================
@@ -387,9 +388,10 @@ function makeRenameButton(endpoint, id, oldName, reload) {
   }, t("rename_btn_title"));
 }
 
-function makeRow(list, labelText, jumpPos, buttons) {
+function makeRow(list, labelText, jumpPos, buttons, key) {
   const row = document.createElement("div");
   row.className = "wp-row";
+  if (key) row.dataset.key = key;
   const name = document.createElement("span");
   name.className = "wp-name";
   name.title = t("show_on_map");
@@ -398,6 +400,18 @@ function makeRow(list, labelText, jumpPos, buttons) {
   row.appendChild(name);
   for (const btn of buttons) row.appendChild(btn);
   list.appendChild(row);
+}
+
+// Highlight the list row for the currently selected map item
+function applyRowSelection() {
+  const list = document.getElementById("waypointList");
+  if (!list) return;
+  const key = state.selected.type ? `${state.selected.type}:${state.selected.id}` : null;
+  list.querySelectorAll(".wp-row.selected").forEach(r => r.classList.remove("selected"));
+  if (!key) return;
+  const row = list.querySelector(`.wp-row[data-key="${key}"]`);
+  if (row) row.classList.add("selected");
+  return row;
 }
 
 function renderWaypointList() {
@@ -417,7 +431,7 @@ function renderWaypointList() {
       makeButton("×", () => {
         if (confirm(t("confirm_delete_waypoint", { name: wp.name }))) deleteWaypoint(wp.id);
       }, t("delete_btn")),
-    ]);
+    ], `wp:${wp.id}`);
   }
 
   for (const elevator of state.elevators) {
@@ -430,7 +444,7 @@ function renderWaypointList() {
         makeButton("×", () => {
           if (confirm(t("confirm_delete_elevator", { name: elevator.name }))) deleteElevator(elevator.id);
         }, t("delete_btn")),
-      ]);
+      ], `elevator:${elevator.id}`);
   }
 
   for (const portal of state.portals) {
@@ -445,7 +459,7 @@ function renderWaypointList() {
         makeButton("×", () => {
           if (confirm(t("confirm_delete_portal", { name: portal.name }))) deletePortal(portal.id);
         }, t("delete_btn")),
-      ]);
+      ], `portal:${portal.id}`);
   }
 
   for (const zone of state.portalIgnore) {
@@ -459,7 +473,7 @@ function renderWaypointList() {
             deletePortalIgnoreZone(zone.id);
           }
         }, t("delete_btn")),
-      ]);
+      ], `zone:${zone.id}`);
   }
 
   for (const cart of state.carts) {
@@ -475,8 +489,10 @@ function renderWaypointList() {
         makeButton("×", () => {
           if (confirm(t("confirm_delete_cart", { name: cart.name }))) deleteCart(cart.id);
         }, t("delete_btn")),
-      ]);
+      ], `cart:${cart.id}`);
   }
+
+  applyRowSelection();
 }
 
 // ==================== Лифты ====================
@@ -526,6 +542,90 @@ function jumpTo(x, y, z) {
   state.camX = point.x - canvas.width / (2 * state.zoom);
   state.camY = point.y - canvas.height / (2 * state.zoom);
   if (view3dReady && state.view3d) View3D.centerOn(x, y, z);
+}
+
+// ==================== Выбор элемента на карте ====================
+
+// Экранные координаты мировой точки (см)
+function worldScreen(wx, wy) {
+  const p = worldToImage(currentTransform(), wx, wy);
+  return imageToScreen(p.x, p.y);
+}
+
+// Расстояние от точки до отрезка (в пикселях экрана)
+function distToSegment(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  let tt = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+  tt = Math.max(0, Math.min(1, tt));
+  return Math.hypot(px - (ax + dx * tt), py - (ay + dy * tt));
+}
+
+// Что находится под кликом (в px экрана). Возвращает {type, id} или null.
+function hitTestMap(sx, sy) {
+  const HIT = 14; // радиус попадания, px
+  let best = null, bestDist = HIT;
+  const consider = (dist, type, id) => {
+    if (dist <= bestDist) { bestDist = dist; best = { type, id }; }
+  };
+
+  for (const wp of state.waypoints) {
+    const p = worldScreen(wp.x, wp.y);
+    consider(Math.hypot(sx - p.x, sy - p.y), "wp", wp.id);
+  }
+  for (const elevator of state.elevators) {
+    const p = worldScreen(elevator.x, elevator.y);
+    consider(Math.hypot(sx - p.x, sy - p.y), "elevator", elevator.id);
+  }
+  for (const zone of state.portalIgnore) {
+    const p = worldScreen(zone.x, zone.y);
+    consider(Math.hypot(sx - p.x, sy - p.y), "zone", zone.id);
+  }
+  for (const portal of state.portals) {
+    for (const end of [portal.from, portal.to]) {
+      if (end.world !== state.viewedWorld) continue;
+      const p = worldScreen(end.x, end.y);
+      consider(Math.hypot(sx - p.x, sy - p.y), "portal", portal.id);
+    }
+  }
+  for (const cart of state.carts) {
+    // Попадание по концам и по всей линии рельсов
+    for (const idx of [0, cart.path.length - 1]) {
+      const p = worldScreen(cart.path[idx][0], cart.path[idx][1]);
+      consider(Math.hypot(sx - p.x, sy - p.y), "cart", cart.id);
+    }
+    for (let i = 1; i < cart.path.length; i++) {
+      const a = worldScreen(cart.path[i - 1][0], cart.path[i - 1][1]);
+      const b = worldScreen(cart.path[i][0], cart.path[i][1]);
+      consider(distToSegment(sx, sy, a.x, a.y, b.x, b.y), "cart", cart.id);
+    }
+  }
+  return best;
+}
+
+function selectMapItem(type, id) {
+  state.selected = { type, id };
+  const panel = document.getElementById("waypointPanel");
+  positionWaypointPanel();
+  panel.classList.remove("hidden");
+  const row = applyRowSelection();
+  if (row) row.scrollIntoView({ block: "nearest" });
+}
+
+function clearMapSelection() {
+  if (!state.selected.type) return;
+  state.selected = { type: null, id: null };
+  applyRowSelection();
+}
+
+// Клик по карте: выбрать элемент под курсором или снять выбор
+function handleMapClick(sx, sy) {
+  const hit = hitTestMap(sx, sy);
+  if (hit) {
+    selectMapItem(hit.type, hit.id);
+  } else {
+    clearMapSelection();
+  }
 }
 
 // ==================== Тележки (рельсовый транспорт) ====================
@@ -1367,6 +1467,8 @@ function draw() {
     }
   }
 
+  drawSelectionOverlay();
+
   const coordsEl = document.getElementById("coords");
   if (state.lastMouse) {
     coordsEl.textContent = t("coords", {
@@ -1380,10 +1482,82 @@ function draw() {
 }
 requestAnimationFrame(draw);
 
+// Подсветка выбранного элемента и связь между концами (порталы, тележки)
+function drawSelectionOverlay() {
+  const sel = state.selected;
+  if (!sel.type) return;
+
+  const ring = (sx, sy, r) => {
+    ctx.strokeStyle = "#d4a017";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  };
+
+  if (sel.type === "portal") {
+    const portal = state.portals.find(p => p.id === sel.id);
+    if (!portal) return;
+    const fromIn = portal.from.world === state.viewedWorld;
+    const toIn = portal.to.world === state.viewedWorld;
+    const fromPos = fromIn ? worldScreen(portal.from.x, portal.from.y) : null;
+    const toPos = toIn ? worldScreen(portal.to.x, portal.to.y) : null;
+    // Яркая линия связи между входом и выходом
+    if (fromPos && toPos) {
+      ctx.strokeStyle = "#d4a017";
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(fromPos.x, fromPos.y);
+      ctx.lineTo(toPos.x, toPos.y);
+      ctx.stroke();
+    }
+    if (fromPos) ring(fromPos.x, fromPos.y, 12);
+    if (toPos) ring(toPos.x, toPos.y, 12);
+    // Связь ведёт в другой мир — подсказываем стрелкой с ярлыком
+    const visible = fromPos || toPos;
+    const otherWorld = fromPos ? (toIn ? null : portal.to.world) : portal.from.world;
+    if (visible && otherWorld) {
+      ctx.fillStyle = "#d4a017";
+      ctx.font = "bold 12px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("→ " + otherWorld, visible.x, visible.y + 26);
+      ctx.textAlign = "left";
+    }
+  } else if (sel.type === "cart") {
+    const cart = state.carts.find(c => c.id === sel.id);
+    if (!cart) return;
+    // Яркая подсветка всего пути (связь между станциями) + концы
+    ctx.strokeStyle = "#d4a017";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    cart.path.forEach((p, i) => {
+      const s = worldScreen(p[0], p[1]);
+      if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+    });
+    ctx.stroke();
+    for (const idx of [0, cart.path.length - 1]) {
+      const s = worldScreen(cart.path[idx][0], cart.path[idx][1]);
+      ring(s.x, s.y, 9);
+    }
+  } else {
+    // Точка / лифт / зона — кольцо вокруг маркера
+    const lists = {
+      wp: state.waypoints, elevator: state.elevators, zone: state.portalIgnore,
+    };
+    const item = (lists[sel.type] || []).find(e => e.id === sel.id);
+    if (!item) return;
+    const s = worldScreen(item.x, item.y);
+    ring(s.x, s.y, 13);
+  }
+}
+
 // ==================== Мышь ====================
 
 let dragging = false;
 let dragStart = null;
+let dragMoved = false;
 
 function disableFollow() {
   state.follow = false;
@@ -1392,6 +1566,7 @@ function disableFollow() {
 
 canvas.addEventListener("mousedown", (e) => {
   dragging = true;
+  dragMoved = false;
   dragStart = { x: e.offsetX, y: e.offsetY, camX: state.camX, camY: state.camY };
 });
 
@@ -1403,9 +1578,15 @@ canvas.addEventListener("mousemove", (e) => {
     state.camX = dragStart.camX - (e.offsetX - dragStart.x) / state.zoom;
     state.camY = dragStart.camY - (e.offsetY - dragStart.y) / state.zoom;
     if (Math.abs(e.offsetX - dragStart.x) + Math.abs(e.offsetY - dragStart.y) > 3) {
+      dragMoved = true;
       disableFollow();
     }
   }
+});
+
+// Клик без перетаскивания = выбор элемента карты
+canvas.addEventListener("click", (e) => {
+  if (!dragMoved) handleMapClick(e.offsetX, e.offsetY);
 });
 
 canvas.addEventListener("wheel", (e) => {
@@ -1427,12 +1608,16 @@ function touchPoint(touch) {
   return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
 }
 
+let tapStart = null; // {x, y, t} для распознавания тапа (не свайпа)
+
 canvas.addEventListener("touchstart", (e) => {
   e.preventDefault();
   if (e.touches.length === 1) {
     const p = touchPoint(e.touches[0]);
     touchState = { mode: "pan", x: p.x, y: p.y };
+    tapStart = { x: p.x, y: p.y };
   } else if (e.touches.length === 2) {
+    tapStart = null;
     const p1 = touchPoint(e.touches[0]), p2 = touchPoint(e.touches[1]);
     touchState = {
       mode: "pinch",
@@ -1447,6 +1632,7 @@ canvas.addEventListener("touchmove", (e) => {
   if (!touchState) return;
   if (touchState.mode === "pan" && e.touches.length === 1) {
     const p = touchPoint(e.touches[0]);
+    if (tapStart && Math.hypot(p.x - tapStart.x, p.y - tapStart.y) > 8) tapStart = null;
     state.camX -= (p.x - touchState.x) / state.zoom;
     state.camY -= (p.y - touchState.y) / state.zoom;
     touchState.x = p.x;
@@ -1470,7 +1656,10 @@ canvas.addEventListener("touchmove", (e) => {
 }, { passive: false });
 
 canvas.addEventListener("touchend", (e) => {
-  if (e.touches.length === 0) touchState = null;
+  if (e.touches.length === 0) {
+    touchState = null;
+    if (tapStart) { handleMapClick(tapStart.x, tapStart.y); tapStart = null; }
+  }
 }, { passive: false });
 
 // ==================== 3D-вид ====================
