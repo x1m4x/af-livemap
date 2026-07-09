@@ -138,8 +138,8 @@ class ScanStore:
     """
 
     CELL = 50.0
-    MAX_COUNT = 10   # потолок счётчика: старый мусор не становится «непробиваемым»
-    CARVE = 5        # на сколько уменьшает счётчик луч, прошедший сквозь воксель
+    MAX_COUNT = 25   # запас прочности вокселя: сколько «здоровья» копит стена
+    CARVE = 1        # на сколько уменьшает счётчик луч, прошедший сквозь воксель
 
     def __init__(self, lidar_path: str, persist_path: str):
         self.lidar_path = lidar_path
@@ -248,12 +248,15 @@ class ScanStore:
             json.dump(raw, f)
         os.replace(tmp, self.persist_path)
 
-    def _carve_ray(self, cells, origin, point):
+    def _carve_ray(self, cells, origin, point, protect):
         """Луч прошёл от origin до point: воксели по пути — пустота.
 
         Уменьшаем их счётчик; на нуле воксель становится «надгробием» [0, version],
         чтобы клиенты узнали об удалении инкрементально. Так стирается мусор от
         машин/NPC: достаточно посмотреть сквозь место, где они были.
+
+        `protect` — воксели, в которые в этом же тике попал луч (реальные стены):
+        их не трогаем, чтобы карвинг не выедал то, что мы прямо сейчас видим.
         """
         dx = point[0] - origin[0]
         dy = point[1] - origin[1]
@@ -270,7 +273,7 @@ class ScanStore:
             k = (int((origin[0] + dx * t / distance) // self.CELL),
                  int((origin[1] + dy * t / distance) // self.CELL),
                  int((origin[2] + dz * t / distance) // self.CELL))
-            if k not in seen:
+            if k not in seen and k not in protect:
                 seen.add(k)
                 cell = cells.get(k)
                 if cell and cell[0] > 0:
@@ -290,15 +293,29 @@ class ScanStore:
         with self._lock:
             cells = self.worlds.setdefault(world, {})
             self.version += 1
+
+            # 1. Воксели, в которые попали лучи этого тика — это реальные
+            #    поверхности; защищаем их от карвинга (см. _carve_ray).
+            hit_keys = set()
             for point in points:
-                if origin:
-                    self._carve_ray(cells, origin, point)
+                if any(self._in_zone(e, world, point[0], point[1], point[2]) for e in self.elevators):
+                    continue
+                hit_keys.add((int(point[0] // self.CELL),
+                              int(point[1] // self.CELL),
+                              int(point[2] // self.CELL)))
+
+            # 2. Карвинг пустоты вдоль лучей (мимо защищённых вокселей)
+            if origin:
+                for point in points:
+                    self._carve_ray(cells, origin, point, hit_keys)
+
+            # 3. Регистрируем попадания
+            for point in points:
                 if any(self._in_zone(e, world, point[0], point[1], point[2]) for e in self.elevators):
                     continue  # внутри зоны лифта не сканируем (движущаяся кабина = мусор)
-                gx = int(point[0] // self.CELL)
-                gy = int(point[1] // self.CELL)
-                gz = int(point[2] // self.CELL)
-                key = (gx, gy, gz)
+                key = (int(point[0] // self.CELL),
+                       int(point[1] // self.CELL),
+                       int(point[2] // self.CELL))
                 cell = cells.get(key)
                 if cell:
                     cell[0] = min(cell[0] + 1, self.MAX_COUNT)
