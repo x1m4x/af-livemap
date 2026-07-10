@@ -85,6 +85,11 @@ const I18N = (() => {
       portal_exit_prefix: "exit: ",
       portal_name_cross: "Portal → {world}",
       portal_name: "Portal",
+      portal_uses: "traveled ×{n}",
+      portal_uses_title: "How many times you traveled through this portal",
+      floor3d_floor: "Floor ±5 m",
+      floor3d_all: "Whole map",
+      floor3d_title: "3D cloud: show only the current floor or the whole scanned map",
       new_portal_console: "New portal detected:",
       confirm_delete_portal: "Delete \"{name}\"? (false hits — e.g. after death — delete freely)",
 
@@ -204,6 +209,11 @@ const I18N = (() => {
       portal_exit_prefix: "выход: ",
       portal_name_cross: "Портал → {world}",
       portal_name: "Портал",
+      portal_uses: "переходов: {n}",
+      portal_uses_title: "Сколько раз ты прошёл через этот портал",
+      floor3d_floor: "Этаж ±5 м",
+      floor3d_all: "Вся карта",
+      floor3d_title: "Облако в 3D: только текущий этаж или вся отсканированная карта",
       new_portal_console: "Обнаружен новый портал:",
       confirm_delete_portal: "Удалить «{name}»? (ложные срабатывания — например, после смерти — удаляй смело)",
 

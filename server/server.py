@@ -8,6 +8,7 @@ Run:
 """
 
 import argparse
+import gzip
 import io
 import json
 import locale
@@ -37,6 +38,8 @@ CONSOLE_STRINGS = {
         "addr_phone": "AF LiveMap (phone on same network):  http://{ip}:{port}",
         "phone_hint": "If the phone can't open it: allow python through the Windows firewall (dialog on first run).",
         "data_path": "Data: {path}",
+        "portal_suppressed": "Portal suppressed: destination inside no-portal zone '{zone}'",
+        "portals_migrated": "Portals cleaned up: {merged} duplicates merged, {purged} removed inside no-portal zones, {renamed} renamed (backup: portals.json.bak)",
     },
     "ru": {
         "scan_loaded": "Скан загружен: {total} ячеек, миров: {worlds}",
@@ -50,6 +53,8 @@ CONSOLE_STRINGS = {
         "addr_phone": "AF LiveMap (телефон в той же сети):  http://{ip}:{port}",
         "phone_hint": "Если телефон не открывает: разреши python в брандмауэре Windows (диалог при первом запуске).",
         "data_path": "Данные: {path}",
+        "portal_suppressed": "Портал подавлен: выход внутри зоны «не портал» '{zone}'",
+        "portals_migrated": "Порталы почищены: слито дублей {merged}, удалено в зонах {purged}, переименовано {renamed} (бэкап: portals.json.bak)",
     },
 }
 
@@ -214,6 +219,8 @@ class ScanStore:
                 worlds_raw = raw
             ratio = stored_cell / self.CELL
             for world, cells in worlds_raw.items():
+                if world in ("unknown", "MainMenu"):
+                    continue  # мусорные миры не грузим
                 target = self.worlds.setdefault(world, {})
                 for c in cells:
                     key = (
@@ -293,6 +300,8 @@ class ScanStore:
     def _ingest(self, batch: dict):
         seq = batch.get("seq")
         world = batch.get("world") or "unknown"
+        if world in ("unknown", "MainMenu"):
+            return  # меню — не карта
         points = batch.get("points") or []
         origin = batch.get("origin")
         if seq is not None and seq == self._last_seq:
@@ -506,11 +515,74 @@ def save_portals_data(data: dict):
     os.replace(tmp, portals_path)
 
 
+def migrate_portals():
+    """Разовая чистка при старте: слить дубли, убрать порталы в зонах «не портал»,
+    пронумеровать безымянные. Перед изменениями пишется portals.json.bak."""
+    with portals_lock:
+        data = load_portals_data()
+        portals = data["portals"]
+        zones = data["ignore"]
+        if not portals:
+            return
+
+        def near_origin(end):
+            # Позиция у (0,0,0) — transient-чтение пешки при загрузке, не телепорт
+            return math.hypot(end.get("x", 0), end.get("y", 0), end.get("z", 0)) < 200
+
+        before = len(portals)
+        kept = [
+            p for p in portals
+            if not near_origin(p["from"]) and not near_origin(p["to"])
+            and not in_ignore_zone(zones, p["to"].get("world") or "unknown",
+                                   p["to"].get("x", 0), p["to"].get("y", 0), p["to"].get("z", 0))
+        ]
+        purged = before - len(kept)
+
+        def near(a, b):
+            return (a.get("world") == b.get("world")
+                    and math.hypot(a.get("x", 0) - b.get("x", 0),
+                                   a.get("y", 0) - b.get("y", 0),
+                                   a.get("z", 0) - b.get("z", 0)) < 1500)
+
+        merged_list = []
+        merged = 0
+        for p in kept:
+            target = next((m for m in merged_list
+                           if near(m["from"], p["from"]) and near(m["to"], p["to"])), None)
+            if target:
+                target["count"] = target.get("count", 1) + p.get("count", 1)
+                merged += 1
+            else:
+                merged_list.append(p)
+
+        renamed = 0
+        counter = 0
+        for p in merged_list:
+            if p.get("name") in ("Портал", "Portal"):
+                counter += 1
+                p["name"] = f"Portal {counter}"
+                renamed += 1
+
+        if purged or merged or renamed:
+            try:
+                with open(portals_path, "rb") as f:
+                    backup = f.read()
+                with open(portals_path + ".bak", "wb") as f:
+                    f.write(backup)
+            except OSError:
+                pass
+            data["portals"] = merged_list
+            save_portals_data(data)
+            print(sc("portals_migrated", merged=merged, purged=purged, renamed=renamed))
+
+
 def in_ignore_zone(zones: list, world: str, x: float, y: float, z: float) -> bool:
+    """Цилиндр, а не сфера: телепорт на базу может прибыть на другой этаж,
+    и по 3D-дистанции точка «вылетала» из зоны при перепаде высот."""
     for zone in zones:
         if zone.get("world") != world:
             continue
-        if math.hypot(x - zone["x"], y - zone["y"], z - zone["z"]) < zone["radius"]:
+        if math.hypot(x - zone["x"], y - zone["y"]) < zone["radius"]                 and abs(z - zone["z"]) <= max(2000.0, zone["radius"]):
             return True
     return False
 
@@ -662,10 +734,15 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         del format, args
 
-    def _send_json(self, payload, status=200):
+    def _send_json(self, payload, status=200, compress=False):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        # Большие ответы (скан ~40 МБ) жмём gzip'ом: браузер распакует сам.
+        # compresslevel=1 — скорость важнее степени сжатия (всё равно ~8-10x).
+        if compress and len(body) > 32768 and "gzip" in (self.headers.get("Accept-Encoding") or ""):
+            body = gzip.compress(body, compresslevel=1)
+            self.send_header("Content-Encoding", "gzip")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -712,7 +789,7 @@ class Handler(BaseHTTPRequestHandler):
                 since = int((query.get("since") or ["0"])[0])
             except ValueError:
                 since = 0
-            self._send_json(scan_store.query(world, since))
+            self._send_json(scan_store.query(world, since), compress=True)
         elif path == "/api/worlds":
             assert scan_store is not None
             with waypoints_lock:
@@ -781,7 +858,7 @@ class Handler(BaseHTTPRequestHandler):
                 since = int((query.get("since") or ["0"])[0])
             except ValueError:
                 since = 0
-            self._send_json(walked_store.query(world, since))
+            self._send_json(walked_store.query(world, since), compress=True)
         elif path == "/api/notes":
             with notes_lock:
                 self._send_json(load_notes())
@@ -894,9 +971,17 @@ class Handler(BaseHTTPRequestHandler):
                 if action == "add":
                     src = payload.get("from") or {}
                     dst = payload.get("to") or {}
+                    def near_origin(end):
+                        return math.hypot(float(end.get("x", 0)), float(end.get("y", 0)),
+                                          float(end.get("z", 0))) < 200
+                    if near_origin(src) or near_origin(dst):
+                        self._send_json({"ok": True, "ignored": True, "duplicate": True})
+                        return
                     # Телепорт в зону «не портал» (база и т.п.) — не записываем
                     if in_ignore_zone(data["ignore"], dst.get("world") or "unknown",
                                       float(dst.get("x", 0)), float(dst.get("y", 0)), float(dst.get("z", 0))):
+                        zone_name = next((z.get("name", "?") for z in data["ignore"]), "?")
+                        print(sc("portal_suppressed", zone=zone_name))
                         self._send_json({"ok": True, "ignored": True, "duplicate": True})
                         return
                     # Дедуп: тот же портал = совпадают миры и обе точки в радиусе 5 м
@@ -904,7 +989,7 @@ class Handler(BaseHTTPRequestHandler):
                         return (a.get("world") == b.get("world")
                                 and math.hypot(a.get("x", 0) - b.get("x", 0),
                                                a.get("y", 0) - b.get("y", 0),
-                                               a.get("z", 0) - b.get("z", 0)) < 500)
+                                               a.get("z", 0) - b.get("z", 0)) < 1500)
                     existing = next(
                         (p for p in portals if near(p["from"], src) and near(p["to"], dst)),
                         None)
@@ -1124,6 +1209,7 @@ def main():
     carts_path = os.path.join(persist_dir, "carts.json")
     traders_path = os.path.join(persist_dir, "traders.json")
     load_trader_catalog()
+    migrate_portals()
     notes_path = os.path.join(persist_dir, "notes.json")
     scan_store.set_elevators(load_elevators())
     walked_store = WalkedStore(os.path.join(persist_dir, "walked.json"))

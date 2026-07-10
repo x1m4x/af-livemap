@@ -56,7 +56,7 @@ html, body {
 #map.hidden, #map3d.hidden, #hud3d.hidden { display: none; }
 #hud3d { pointer-events: none; z-index: 3; }
 #map:active { cursor: grabbing; }
-#view3dBtn.active { background: #1f6feb; border-color: #388bfd; }
+#view3dBtn.active, #floor3dBtn.active { background: #1f6feb; border-color: #388bfd; }
 #elevatorBtn.recording, #cartBtn.recording { background: #9e2a2a; border-color: #f85149; animation: pulse 1.2s infinite; }
 @keyframes pulse { 50% { opacity: 0.6; } }
 

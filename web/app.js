@@ -29,7 +29,12 @@ const state = {
   lastMouse: null,
   centered: false,         // камера отцентрирована на игроке в этом мире
   scan: {
-    cells: new Map(),      // "gx:gy:gz" -> {gx, gy, gz, count}
+    // Воксели хранятся по колонкам, колонки — по чанкам 64×64: ребилд канваса
+    // и поиск пола обходят только нужные чанки, а не все ~2 млн ячеек.
+    columns: new Map(),    // "gx:gy" -> {gx, gy, zs: Map(gz -> count)}
+    chunks: new Map(),     // "cx:cy" -> Set("gx:gy") (cx = gx >> 6)
+    cellCount: 0,
+    floorCache: null,      // кэш индекса пола для A*: {columns, version, walkedSize}
     version: 0,
     world: null,           // мир, для которого загружены ячейки
     canvas: null,          // offscreen-канвас видимого региона
@@ -38,9 +43,13 @@ const state = {
     view: null,            // {x0,y0,x1,y1} px карты — регион, для которого построен канвас
     dirty: false,
     dirty3d: false,
+    lastRebuild: 0,        // троттлинг ребилда при зуме/пане
+    builtZoom: 0,          // зум, при котором построен канвас (для staleness)
     refZ: null,            // опорная высота (z игрока, см) для цветов и выбора вокселя
   },
   view3d: false,
+  floor3d: true,           // 3D: показывать только текущий этаж (±5 м)
+  hover: null,             // {type, id} под курсором — подсветка и cursor:pointer
   walked: new Set(),       // "gx:gy:gz" — где игрок физически прошёл (двери и т.п.)
   walkedVersion: 0,
   waypoints: [],
@@ -116,7 +125,7 @@ function switchViewedWorld(world) {
   state.viewedWorld = world;
   state.centered = false;
   state.trails.clear();
-  state.scan.cells.clear();
+  scanClear();
   state.scan.version = 0;
   state.scan.world = world;
   state.scan.epoch = undefined;
@@ -140,11 +149,46 @@ function switchViewedWorld(world) {
 
 // ==================== Скан ====================
 
+const CHUNK = 64; // колонок в чанке по каждой оси (64 × 50 см = 32 м)
+
+function scanInsert(gx, gy, gz, count) {
+  const colKey = gx + ":" + gy;
+  let col = state.scan.columns.get(colKey);
+  if (!col) {
+    col = { gx, gy, zs: new Map() };
+    state.scan.columns.set(colKey, col);
+    const chunkKey = (gx >> 6) + ":" + (gy >> 6);
+    let chunk = state.scan.chunks.get(chunkKey);
+    if (!chunk) { chunk = new Set(); state.scan.chunks.set(chunkKey, chunk); }
+    chunk.add(colKey);
+  }
+  if (count > 0) {
+    if (!col.zs.has(gz)) state.scan.cellCount++;
+    col.zs.set(gz, count);
+  } else if (col.zs.delete(gz)) {
+    state.scan.cellCount--; // надгробие: воксель стёрт карвингом
+  }
+}
+
+function scanHas(gx, gy, gz) {
+  const col = state.scan.columns.get(gx + ":" + gy);
+  return !!col && col.zs.has(gz);
+}
+
+function scanClear() {
+  state.scan.columns.clear();
+  state.scan.chunks.clear();
+  state.scan.cellCount = 0;
+  state.scan.floorCache = null;
+  state.scan.canvas = null;
+  state.scan.view = null;
+}
+
 async function pollScan() {
   try {
     if (!state.viewedWorld) return;
     if (state.scan.world !== state.viewedWorld) {
-      state.scan.cells.clear();
+      scanClear();
       state.scan.version = 0;
       state.scan.world = state.viewedWorld;
     }
@@ -155,7 +199,7 @@ async function pollScan() {
     // сбрасываем кэш и перезагружаем скан с нуля
     if (state.scan.epoch !== undefined && payload.epoch !== state.scan.epoch) {
       state.scan.epoch = payload.epoch;
-      state.scan.cells.clear();
+      scanClear();
       state.scan.version = 0;
       state.scan.dirty = true;
       state.scan.dirty3d = true;
@@ -164,12 +208,7 @@ async function pollScan() {
     state.scan.epoch = payload.epoch;
     if (payload.cells.length > 0) {
       for (const [gx, gy, gz, count] of payload.cells) {
-        const key = `${gx}:${gy}:${gz}`;
-        if (count > 0) {
-          state.scan.cells.set(key, { gx, gy, gz, count });
-        } else {
-          state.scan.cells.delete(key); // надгробие: воксель стёрт карвингом
-        }
+        scanInsert(gx, gy, gz, count);
       }
       state.scan.dirty = true;
       state.scan.dirty3d = true;
@@ -204,11 +243,15 @@ const SCAN_BUCKET_COLORS = [
 ];
 
 // Перерисовать offscreen-канвас скана для видимого региона (вьюпорт + запас).
-// На колонку берётся воксель, ближайший по высоте к игроку, — карта видна
-// на любом удалении и высоте, а перепады читаются цветом.
+// Обходим только чанки, попавшие в регион, — не весь скан. На колонку берётся
+// воксель, ближайший по высоте к игроку; перепады высот читаются цветом.
+// При сильном отдалении (LOD) рисуем чанки целиком: квадрат с яркостью по
+// плотности вместо миллионов неразличимых точек.
 function rebuildScanCanvas() {
   state.scan.dirty = false;
   state.scan.canvas = null;
+  state.scan.lastRebuild = performance.now();
+  state.scan.builtZoom = state.zoom;
 
   // Регион: вьюпорт + запас в полэкрана со всех сторон
   const vw = canvas.width / state.zoom;
@@ -219,28 +262,16 @@ function rebuildScanCanvas() {
   const y1 = state.camY + vh * 1.5;
   state.scan.view = { x0, y0, x1, y1 };
 
-  if (state.scan.cells.size === 0) return;
+  if (state.scan.cellCount === 0) return;
 
   const viewing = state.world === state.viewedWorld;
   const refZ = (viewing && state.scan.refZ !== null) ? state.scan.refZ : null;
   const pxPerCell = SCAN_CELL * WORLD_SCALE;
+  const chunkPx = CHUNK * pxPerCell; // 160 px карты на чанк
 
-  // Лучший воксель на колонку в регионе
-  const best = new Map(); // "gx:gy" -> cell
-  for (const cell of state.scan.cells.values()) {
-    const px = (cell.gx + 0.5) * pxPerCell;
-    const py = (cell.gy + 0.5) * pxPerCell;
-    if (px < x0 || px > x1 || py < y0 || py > y1) continue;
-    const key = `${cell.gx}:${cell.gy}`;
-    const current = best.get(key);
-    if (!current) {
-      best.set(key, cell);
-    } else if (refZ !== null &&
-               Math.abs(cell.gz * SCAN_CELL - refZ) < Math.abs(current.gz * SCAN_CELL - refZ)) {
-      best.set(key, cell);
-    }
-  }
-  if (best.size === 0) return;
+  // Диапазон чанков, накрывающих регион
+  const cx0 = Math.floor(x0 / chunkPx), cx1 = Math.floor(x1 / chunkPx);
+  const cy0 = Math.floor(y0 / chunkPx), cy1 = Math.floor(y1 / chunkPx);
 
   // Канвас региона; при большом регионе рисуем в уменьшенном масштабе
   const regionW = Math.ceil(x1 - x0);
@@ -251,20 +282,55 @@ function rebuildScanCanvas() {
   off.height = Math.max(1, Math.ceil(regionH * scale));
   const octx = off.getContext("2d");
 
-  // Группируем по цветовым корзинам, чтобы не переключать fillStyle на каждую клетку
-  const buckets = SCAN_BUCKET_COLORS.map(() => []);
-  for (const cell of best.values()) {
-    const bucket = refZ === null ? 3 : scanBucket(cell.gz * SCAN_CELL - refZ);
-    buckets[bucket].push(cell);
-  }
-  const cellPx = Math.max(1.2, pxPerCell * scale);
-  for (let b = 0; b < buckets.length; b++) {
-    if (buckets[b].length === 0) continue;
-    octx.fillStyle = SCAN_BUCKET_COLORS[b];
-    for (const cell of buckets[b]) {
-      const px = ((cell.gx + 0.5) * pxPerCell - x0) * scale;
-      const py = ((cell.gy + 0.5) * pxPerCell - y0) * scale;
-      octx.fillRect(px - cellPx / 2, py - cellPx / 2, cellPx, cellPx);
+  const cellDrawPx = pxPerCell * scale;
+  const lod = cellDrawPx < 1.1; // клетка меньше пикселя — рисуем чанками
+
+  if (lod) {
+    const sizePx = chunkPx * scale;
+    for (let cy = cy0; cy <= cy1; cy++) {
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const chunk = state.scan.chunks.get(cx + ":" + cy);
+        if (!chunk || chunk.size === 0) continue;
+        const density = chunk.size / (CHUNK * CHUNK);
+        const alpha = Math.min(0.85, 0.18 + Math.sqrt(density) * 1.1);
+        octx.fillStyle = `rgba(56, 189, 248, ${alpha.toFixed(2)})`;
+        octx.fillRect((cx * chunkPx - x0) * scale, (cy * chunkPx - y0) * scale,
+                      sizePx + 0.5, sizePx + 0.5);
+      }
+    }
+  } else {
+    // Плоские массивы координат по цветовым корзинам — минимум аллокаций
+    const buckets = SCAN_BUCKET_COLORS.map(() => []);
+    for (let cy = cy0; cy <= cy1; cy++) {
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const chunk = state.scan.chunks.get(cx + ":" + cy);
+        if (!chunk) continue;
+        for (const colKey of chunk) {
+          const col = state.scan.columns.get(colKey);
+          if (!col || col.zs.size === 0) continue;
+          const px = (col.gx + 0.5) * pxPerCell;
+          const py = (col.gy + 0.5) * pxPerCell;
+          if (px < x0 || px > x1 || py < y0 || py > y1) continue;
+          // Лучший воксель колонки: ближайший по высоте к игроку
+          let bestGz = null, bestDz = Infinity;
+          for (const gz of col.zs.keys()) {
+            const dz = refZ === null ? 0 : Math.abs(gz * SCAN_CELL - refZ);
+            if (bestGz === null || dz < bestDz) { bestGz = gz; bestDz = dz; }
+          }
+          const bucket = refZ === null ? 3 : scanBucket(bestGz * SCAN_CELL - refZ);
+          buckets[bucket].push((px - x0) * scale, (py - y0) * scale);
+        }
+      }
+    }
+    const cellPx = Math.max(1.2, cellDrawPx);
+    const half = cellPx / 2;
+    for (let b = 0; b < buckets.length; b++) {
+      const pts = buckets[b];
+      if (pts.length === 0) continue;
+      octx.fillStyle = SCAN_BUCKET_COLORS[b];
+      for (let i = 0; i < pts.length; i += 2) {
+        octx.fillRect(pts[i] - half, pts[i + 1] - half, cellPx, cellPx);
+      }
     }
   }
 
@@ -273,10 +339,13 @@ function rebuildScanCanvas() {
   state.scan.scale = scale;
 }
 
-// Вьюпорт вышел за построенный регион — нужен новый канвас
+// Вьюпорт вышел за построенный регион или зум заметно изменился —
+// нужен новый канвас
 function scanRegionStale() {
   const view = state.scan.view;
   if (!view) return true;
+  const ratio = state.zoom / (state.scan.builtZoom || state.zoom);
+  if (ratio > 1.4 || ratio < 0.7) return true;
   const vw = canvas.width / state.zoom;
   const vh = canvas.height / state.zoom;
   return state.camX < view.x0 || state.camY < view.y0 ||
@@ -475,7 +544,7 @@ function renderWaypointList() {
     const crossWorld = portal.from.world !== portal.to.world;
     const anchor = portal.from.world === state.viewedWorld ? portal.from : portal.to;
     makeRow(list,
-      `◎ ${portal.name}${crossWorld ? ` (${portal.from.world} → ${portal.to.world})` : ""} ×${portal.count}`,
+      `◎ ${portal.name}${crossWorld ? ` (${portal.from.world} → ${portal.to.world})` : ""} · ${t("portal_uses", { n: portal.count })}`,
       anchor,
       [
         makeRenameButton("/api/portals", portal.id, portal.name, loadPortals),
@@ -595,9 +664,20 @@ function recordLabelBox(text, cx, cy, type, id) {
   const w = ctx.measureText(text).width;
   labelHitboxes.push({
     type, id,
-    x0: cx - w / 2 - 3, x1: cx + w / 2 + 3,
-    y0: cy - 12, y1: cy + 4,
+    x0: cx - w / 2 - 5, x1: cx + w / 2 + 5,
+    y0: cy - 14, y1: cy + 6,
   });
+  // Подпись под курсором — подчёркиваем: видно, что по ней можно кликнуть
+  if (state.hover && state.hover.type === type && state.hover.id === id) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,255,255,0.75)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - w / 2, cy + 2.5);
+    ctx.lineTo(cx + w / 2, cy + 2.5);
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 // Что находится под кликом (в px экрана). Возвращает {type, id} или null.
@@ -1015,9 +1095,13 @@ async function loadPortals() {
   } catch (err) { /* server unavailable */ }
 }
 
+// Цилиндр, как на сервере: радиус по горизонтали, по высоте — вся база
+// (иначе телепорт с этажа на этаж внутри базы даёт ложный портал)
 function inPortalIgnoreZone(world, x, y, z) {
   return state.portalIgnore.some(zone =>
-    zone.world === world && Math.hypot(x - zone.x, y - zone.y, z - zone.z) < zone.radius);
+    zone.world === world &&
+    Math.hypot(x - zone.x, y - zone.y) < zone.radius &&
+    Math.abs(z - zone.z) <= Math.max(2000, zone.radius));
 }
 
 async function addPortalIgnoreZone(name, radius, x, y, z) {
@@ -1089,6 +1173,12 @@ function detectPortal(local) {
 
   // Меню = разрыв сессии, детект не делаем
   if (!state.world || state.world === "MainMenu") {
+    state.prevLocal = null;
+    return;
+  }
+  // Позиция у (0,0,0) — transient-чтение пешки при загрузке, а не телепорт.
+  // Рвём цепочку, чтобы и следующий реальный кадр не дал ложный «скачок».
+  if (Math.hypot(local.x, local.y, local.z) < 200) {
     state.prevLocal = null;
     return;
   }
@@ -1212,16 +1302,25 @@ function clearRoute() {
 // ==================== Автомаршрут (A* по сканированному полу) ====================
 
 function buildFloorIndex() {
-  const has = key => state.scan.cells.has(key);
+  // Дорогой обход всех колонок (~1 с на 1.7 млн вокселей) — кэшируем.
+  // Пока идёт скан, version меняется каждый поллинг: перестраиваем не чаще
+  // раза в 15 с — маршруту не нужен мгновенно свежий пол
+  const cache = state.scan.floorCache;
+  if (cache && ((cache.version === state.scan.version &&
+                 cache.walkedSize === state.walked.size) ||
+                performance.now() - cache.at < 15000)) {
+    return cache.columns;
+  }
   const columns = new Map(); // "gx:gy" -> [gz пола, ...]
-  for (const cell of state.scan.cells.values()) {
-    if (has(`${cell.gx}:${cell.gy}:${cell.gz + 1}`) ||
-        has(`${cell.gx}:${cell.gy}:${cell.gz + 2}`) ||
-        has(`${cell.gx}:${cell.gy}:${cell.gz + 3}`)) continue;
-    const columnKey = `${cell.gx}:${cell.gy}`;
-    let floors = columns.get(columnKey);
-    if (!floors) { floors = []; columns.set(columnKey, floors); }
-    floors.push(cell.gz);
+  for (const col of state.scan.columns.values()) {
+    if (col.zs.size === 0) continue;
+    // Пол = воксель без вокселей на 1–3 клетки выше (нет потолка вплотную)
+    let floors = null;
+    for (const gz of col.zs.keys()) {
+      if (col.zs.has(gz + 1) || col.zs.has(gz + 2) || col.zs.has(gz + 3)) continue;
+      if (!floors) { floors = []; columns.set(col.gx + ":" + col.gy, floors); }
+      floors.push(gz);
+    }
   }
   // Прохоженные клетки — проходимы всегда, даже если скан видит там «стену»
   // (закрытую дверь): игрок ходил — значит, можно
@@ -1232,6 +1331,10 @@ function buildFloorIndex() {
     if (!floors) { floors = []; columns.set(columnKey, floors); }
     if (!floors.some(z => Math.abs(z - gz) <= 1)) floors.push(gz);
   }
+  state.scan.floorCache = {
+    columns, version: state.scan.version, walkedSize: state.walked.size,
+    at: performance.now(),
+  };
   return columns;
 }
 
@@ -1496,6 +1599,7 @@ function connectStream() {
       if (state.scan.refZ === null || Math.abs(local.z - state.scan.refZ) > 150) {
         state.scan.refZ = local.z;
         state.scan.dirty = true;
+        if (state.floor3d) state.scan.dirty3d = true; // сменился этаж — облако тоже
       }
       if (!state.centered) {
         const point = worldToImage(currentTransform(), local.x, local.y);
@@ -1552,8 +1656,12 @@ function draw() {
   const tf = currentTransform();
   const viewing = state.viewedWorld === state.world;
 
-  // Скан
-  if (state.scan.dirty || scanRegionStale()) rebuildScanCanvas();
+  // Скан. Перестройка канваса дорогая — не чаще ~7 раз/сек: во время зума
+  // и пана старый канвас просто масштабируется, интерфейс не подвисает
+  if ((state.scan.dirty || scanRegionStale()) &&
+      (!state.scan.canvas || performance.now() - state.scan.lastRebuild > 140)) {
+    rebuildScanCanvas();
+  }
   if (state.scan.canvas) {
     const pos = imageToScreen(state.scan.origin.x, state.scan.origin.y);
     const displayScale = state.zoom / state.scan.scale;
@@ -2008,9 +2116,38 @@ let view3dCentered = false;
 
 function rebuildCloud() {
   if (!view3dReady) return;
-  View3D.setCloud([...state.scan.cells.values()]);
+  // Режим «этаж»: только вокселя в ±5 м от высоты игрока — иначе при
+  // миллионах точек 3D превращается в нечитаемую кашу
+  const refZ = (state.world === state.viewedWorld) ? state.scan.refZ : null;
+  const filter = state.floor3d && refZ !== null;
+  const zLo = filter ? Math.floor((refZ - 500) / SCAN_CELL) : -Infinity;
+  const zHi = filter ? Math.ceil((refZ + 500) / SCAN_CELL) : Infinity;
+  const cells = [];
+  for (const col of state.scan.columns.values()) {
+    for (const gz of col.zs.keys()) {
+      if (gz < zLo || gz > zHi) continue;
+      cells.push({ gx: col.gx, gy: col.gy, gz });
+    }
+  }
+  View3D.setCloud(cells);
   state.scan.dirty3d = false;
 }
+
+const floor3dBtn = document.getElementById("floor3dBtn");
+
+function updateFloor3dBtn() {
+  floor3dBtn.textContent = state.floor3d ? t("floor3d_floor") : t("floor3d_all");
+  floor3dBtn.title = t("floor3d_title");
+  floor3dBtn.classList.toggle("active", state.floor3d);
+}
+updateFloor3dBtn();
+
+floor3dBtn.addEventListener("click", () => {
+  state.floor3d = !state.floor3d;
+  state.scan.dirty3d = true;
+  updateFloor3dBtn();
+  if (state.view3d) rebuildCloud();
+});
 
 document.getElementById("view3dBtn").addEventListener("click", () => {
   if (!view3dReady) {
@@ -2030,6 +2167,7 @@ document.getElementById("view3dBtn").addEventListener("click", () => {
   document.getElementById("hud3d").classList.toggle("hidden", !state.view3d);
   canvas.classList.toggle("hidden", state.view3d);
   document.getElementById("view3dBtn").classList.toggle("active", state.view3d);
+  floor3dBtn.classList.toggle("hidden", !state.view3d);
   if (state.view3d) {
     rebuildCloud();
     syncView3dMarkers();
@@ -2131,14 +2269,25 @@ document.getElementById("traderPickAdd").addEventListener("click", async () => {
   document.getElementById("waypointPanel").classList.remove("hidden");
 });
 
-// ---- Наведение на торговца — тултип с его обменами ----
+// ---- Наведение: курсор-указатель над кликабельным, тултип торговца ----
 canvas.addEventListener("mousemove", (e) => {
   if (state.view3d) return;
+  if (dragging) {
+    canvas.style.cursor = "grabbing";
+    return;
+  }
+  const hit = hitTestMap(e.offsetX, e.offsetY);
+  state.hover = hit;
+  canvas.style.cursor = hit ? "pointer" : "";
   const tr = traderAt(e.offsetX, e.offsetY);
   if (tr) showTraderTooltip(tr, e.clientX, e.clientY);
   else hideTraderTooltip();
 });
-canvas.addEventListener("mouseleave", hideTraderTooltip);
+canvas.addEventListener("mouseleave", () => {
+  hideTraderTooltip();
+  state.hover = null;
+  canvas.style.cursor = "";
+});
 
 document.getElementById("noPortalBtn").addEventListener("click", async () => {
   const local = state.players.find(p => p.isLocal) || state.players[0];
