@@ -31,6 +31,7 @@ No pre-made maps needed: you just walk around and look, and the map reveals itse
 - **Elevators** — recorded with one button: stand in the cabin, press "Elevator", ride through the floors, press again. The map detects the stops by height. The elevator zone is excluded from the scan (the moving cabin no longer creates junk), and routes can ride between floors.
 - **Carts / rail transport** — the whole path is recorded; in routes it's a "start ↔ end" edge that draws the real rail trajectory.
 - **Portals — auto-detected.** Teleport (a big jump or a world change) and a portal is recorded automatically, both entrance and exit. Repeat passes confirm it. Death/respawn is not counted as a portal. There are **"no-portal" zones** — for a teleport-to-base item, so it doesn't spawn false portals.
+- **Click to inspect & jump.** Click any element (or its list row) to select it: it's highlighted, its list row scrolls into view, and for portals/carts the **link between its two ends** is drawn (in 2D and 3D). Click a portal/cart again to **jump the camera to its other end** (cross-world portals switch to the destination world); elevator clicks cycle through its floors.
 
 ### 🚶 Routing that accounts for doors
 - Automatic pathfinding (A*) over the scanned "floor".
@@ -41,6 +42,7 @@ No pre-made maps needed: you just walk around and look, and the map reveals itse
 - A shared notepad with autosave, synced between PC and phone.
 - The server is exposed to the local network — open the map on your phone on the same Wi-Fi and view/edit from there. The UI is touch-friendly.
 - Auto-switches to the world the player is in; you can manually view other worlds (their scan and markers).
+- **Interface in English or Russian** — auto-detected from your browser, switchable in the top bar.
 
 ---
 
@@ -88,6 +90,8 @@ python server\server.py --data "C:\Games\AbioticFactor\AbioticFactor\Binaries\Wi
 ```
 
 **Set `--data` to your own path** — the `livemap.json` inside the mod folder from step 2 (`...\ue4ss\Mods\AFLiveMap\livemap.json`). If the path is wrong, the server clearly prints a "file not found" warning.
+
+Optional flags: `--port 8765`, `--carve` (auto-clean vehicle/NPC ghosts — off by default), `--lang en|ru|auto` (console language).
 
 On startup the server prints two addresses:
 
@@ -163,7 +167,7 @@ Two fake players walk around and a "room" scan accumulates on the map.
 ## How it works
 
 - **Mod** (`mod/Scripts/main.lua`) — UE4SS Lua. The game thread does only light data gathering (positions + a few traces); file writes and JSON encoding are offloaded to a background thread so FPS never drops. Writes `livemap.json` (positions) and `lidar.json` (points + where the rays were cast from).
-- **Server** (`server/server.py`) — Python stdlib, no dependencies. Watches the mod's files, accumulates the voxel map and "walked" cells, carves the scan along rays, serves the web UI and streams updates over SSE. Stores waypoints/elevators/portals/carts/notes in `data/`.
+- **Server** (`server/server.py`) — Python stdlib, no dependencies. Watches the mod's files, accumulates the voxel map and "walked" cells (optionally carving along rays with `--carve`), serves the web UI and streams updates over SSE. Stores waypoints/elevators/portals/carts/notes in `data/`.
 - **Web** (`web/`) — plain JS + Canvas (2D) and WebGL (3D), no build step and no libraries.
 
 Runtime data (`data/`), sector images and the files the mod writes are not committed (see `.gitignore`) — everyone has their own.
