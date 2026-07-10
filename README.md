@@ -72,13 +72,22 @@ ue4ss\Mods\AFLiveMap\enabled.txt
 
 ### 3. The server
 
-From the repo folder run (no dependencies, standard Python only):
+> The server files do **not** go into the game folder. Keep this downloaded
+> folder anywhere (Desktop is fine) — you just run a small Python program from it.
+> You need **Python 3.10+** installed ([python.org](https://www.python.org/downloads/),
+> tick **"Add Python to PATH"** during setup).
+
+**Easiest — double-click `start-server.bat`.** It finds Python, auto-detects your
+game folder and starts the server. If it can't find the game, it asks you to
+paste the path to `livemap.json` once and remembers it.
+
+**Manual (if you prefer the command line):** from this folder run —
 
 ```powershell
 python server\server.py --data "C:\Games\AbioticFactor\AbioticFactor\Binaries\Win64\ue4ss\Mods\AFLiveMap\livemap.json"
 ```
 
-**Set `--data` to your own path** — the `livemap.json` from the mod folder (step 2). If the path is wrong, the server clearly prints a "file not found" warning.
+**Set `--data` to your own path** — the `livemap.json` inside the mod folder from step 2 (`...\ue4ss\Mods\AFLiveMap\livemap.json`). If the path is wrong, the server clearly prints a "file not found" warning.
 
 On startup the server prints two addresses:
 
