@@ -42,7 +42,9 @@ const View3D = (() => {
       // Туман: дальнее тонет в фоне — у сцены появляется глубина
       float fog = smoothstep(uFogFar * 0.35, uFogFar, w);
       vColor = mix(color, vec3(${BG[0]}, ${BG[1]}, ${BG[2]}), max(ghost * 0.88, fog * 0.85));
-      vDepth = clamp(w / 300.0, 0.0, 1.0);
+      // Лог-глубина: линейная упаковка 300 м в 8-битную альфу давала ~1 м на
+      // шаг — стены в паре метров друг от друга становились неразличимы для EDL
+      vDepth = clamp(log2(1.0 + w) / 8.24, 0.0, 1.0);
       // Два прохода (яркие пишут глубину, призраки нет): не наш — выбрасываем
       float g = step(0.5, ghost);
       vDrop = uGhostPass < -0.5 ? 0.0 : abs(g - uGhostPass);
@@ -85,19 +87,29 @@ const View3D = (() => {
     uniform vec2 uInvSize;
     uniform float uStrength;
     varying vec2 vUv;
+    float edlResp(vec2 offs, float zc) {
+      return max(0.0, zc - texture2D(uTex, vUv + offs).a);
+    }
     void main() {
       vec4 c = texture2D(uTex, vUv);
       float zc = c.a;
+      vec2 px = uInvSize;
+      // Сэмплы на 1px попадали внутрь собственного спрайта точки (до 6px) —
+      // разница глубин была нулевой и затенение не работало. Кольцо 2px
+      // выходит за спрайт, кольцо 4px ловит «стену за стеной» через прорехи
+      // между точками ближней стены.
       float resp = 0.0;
-      resp += max(0.0, zc - texture2D(uTex, vUv + vec2(uInvSize.x, 0.0)).a);
-      resp += max(0.0, zc - texture2D(uTex, vUv - vec2(uInvSize.x, 0.0)).a);
-      resp += max(0.0, zc - texture2D(uTex, vUv + vec2(0.0, uInvSize.y)).a);
-      resp += max(0.0, zc - texture2D(uTex, vUv - vec2(0.0, uInvSize.y)).a);
-      resp += max(0.0, zc - texture2D(uTex, vUv + uInvSize).a) * 0.7;
-      resp += max(0.0, zc - texture2D(uTex, vUv - uInvSize).a) * 0.7;
-      resp += max(0.0, zc - texture2D(uTex, vUv + vec2(uInvSize.x, -uInvSize.y)).a) * 0.7;
-      resp += max(0.0, zc - texture2D(uTex, vUv + vec2(-uInvSize.x, uInvSize.y)).a) * 0.7;
-      float shade = exp(-resp * uStrength);
+      resp += edlResp(vec2( 2.0 * px.x, 0.0), zc);
+      resp += edlResp(vec2(-2.0 * px.x, 0.0), zc);
+      resp += edlResp(vec2(0.0,  2.0 * px.y), zc);
+      resp += edlResp(vec2(0.0, -2.0 * px.y), zc);
+      resp += edlResp(vec2( 4.0 * px.x,  4.0 * px.y), zc) * 0.6;
+      resp += edlResp(vec2(-4.0 * px.x,  4.0 * px.y), zc) * 0.6;
+      resp += edlResp(vec2( 4.0 * px.x, -4.0 * px.y), zc) * 0.6;
+      resp += edlResp(vec2(-4.0 * px.x, -4.0 * px.y), zc) * 0.6;
+      resp /= 6.4;
+      // Пол яркости 0.2: дальняя стена заметно темнее, но не исчезает
+      float shade = max(exp(-uStrength * resp), 0.2);
       gl_FragColor = vec4(c.rgb * shade, 1.0);
     }
   `;
@@ -559,7 +571,7 @@ const View3D = (() => {
       gl.bindTexture(gl.TEXTURE_2D, fboTexture);
       gl.uniform1i(edlUniforms.tex, 0);
       gl.uniform2f(edlUniforms.invSize, 1 / canvas.width, 1 / canvas.height);
-      gl.uniform1f(edlUniforms.strength, 14.0);
+      gl.uniform1f(edlUniforms.strength, 12.0);
       gl.bindBuffer(gl.ARRAY_BUFFER, edlQuadBuffer);
       gl.enableVertexAttribArray(edlUniforms.quad);
       gl.vertexAttribPointer(edlUniforms.quad, 2, gl.FLOAT, false, 0, 0);
