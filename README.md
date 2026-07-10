@@ -77,9 +77,9 @@ ue4ss\Mods\AFLiveMap\enabled.txt
 > You need **Python 3.10+** installed ([python.org](https://www.python.org/downloads/),
 > tick **"Add Python to PATH"** during setup).
 
-**Easiest — double-click `start-server.bat`.** It finds Python, auto-detects your
-game folder and starts the server. If it can't find the game, it asks you to
-paste the path to `livemap.json` once and remembers it.
+**Easiest — run `start-server.py`** (double-click it, or `python start-server.py`).
+It auto-detects your game folder and starts the server. If it can't find the game,
+it asks you to paste the path to `livemap.json` once and remembers it.
 
 **Manual (if you prefer the command line):** from this folder run —
 
