@@ -602,8 +602,10 @@ function recordLabelBox(text, cx, cy, type, id) {
 
 // Что находится под кликом (в px экрана). Возвращает {type, id} или null.
 function hitTestMap(sx, sy) {
-  // Подписи проверяем первыми: если кликнули по названию — берём его
-  for (const b of labelHitboxes) {
+  // Подписи проверяем первыми: если кликнули по названию — берём его.
+  // Идём с конца: подпись, нарисованная последней, лежит сверху.
+  for (let i = labelHitboxes.length - 1; i >= 0; i--) {
+    const b = labelHitboxes[i];
     if (sx >= b.x0 && sx <= b.x1 && sy >= b.y0 && sy <= b.y1) {
       return { type: b.type, id: b.id };
     }
@@ -1512,11 +1514,11 @@ function connectStream() {
 }
 
 function updateTrails() {
-  const t = currentTransform();
+  const tf = currentTransform();
   const alive = new Set();
   for (const player of state.players) {
     alive.add(player.id);
-    const point = worldToImage(t, player.x, player.y);
+    const point = worldToImage(tf, player.x, player.y);
     let trail = state.trails.get(player.id);
     if (!trail) {
       trail = [];
@@ -1547,7 +1549,7 @@ function draw() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   labelHitboxes = []; // пересобираем зоны клика по подписям каждый кадр
 
-  const t = currentTransform();
+  const tf = currentTransform();
   const viewing = state.viewedWorld === state.world;
 
   // Скан
@@ -1585,11 +1587,11 @@ function draw() {
     ctx.strokeStyle = "rgba(255, 220, 60, 0.9)";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    const startPoint = worldToImage(t, state.route.points[0].x, state.route.points[0].y);
+    const startPoint = worldToImage(tf, state.route.points[0].x, state.route.points[0].y);
     const startScreen = imageToScreen(startPoint.x, startPoint.y);
     ctx.moveTo(startScreen.x, startScreen.y);
     for (let i = 1; i < state.route.points.length; i++) {
-      const point = worldToImage(t, state.route.points[i].x, state.route.points[i].y);
+      const point = worldToImage(tf, state.route.points[i].x, state.route.points[i].y);
       const screen = imageToScreen(point.x, point.y);
       ctx.lineTo(screen.x, screen.y);
     }
@@ -1598,7 +1600,7 @@ function draw() {
 
   // Лифты: круг зоны + символ
   for (const elevator of state.elevators) {
-    const point = worldToImage(t, elevator.x, elevator.y);
+    const point = worldToImage(tf, elevator.x, elevator.y);
     const pos = imageToScreen(point.x, point.y);
     const radius = elevator.radius * WORLD_SCALE * state.zoom;
     ctx.strokeStyle = "rgba(255, 165, 60, 0.9)";
@@ -1628,7 +1630,7 @@ function draw() {
     ctx.beginPath();
     let started = false;
     for (const p of cart.path) {
-      const point = worldToImage(t, p[0], p[1]);
+      const point = worldToImage(tf, p[0], p[1]);
       const pos = imageToScreen(point.x, point.y);
       if (!started) { ctx.moveTo(pos.x, pos.y); started = true; }
       else ctx.lineTo(pos.x, pos.y);
@@ -1636,7 +1638,7 @@ function draw() {
     ctx.stroke();
     ctx.setLineDash([]);
     for (const idx of [0, cart.path.length - 1]) {
-      const point = worldToImage(t, cart.path[idx][0], cart.path[idx][1]);
+      const point = worldToImage(tf, cart.path[idx][0], cart.path[idx][1]);
       const pos = imageToScreen(point.x, point.y);
       ctx.fillStyle = "#4ade80";
       ctx.beginPath();
@@ -1644,7 +1646,7 @@ function draw() {
       ctx.fill();
     }
     const mid = cart.path[Math.floor(cart.path.length / 2)];
-    const midPoint = worldToImage(t, mid[0], mid[1]);
+    const midPoint = worldToImage(tf, mid[0], mid[1]);
     const midPos = imageToScreen(midPoint.x, midPoint.y);
     ctx.fillStyle = "#86efac";
     ctx.font = "12px sans-serif";
@@ -1657,7 +1659,7 @@ function draw() {
 
   // Зоны «не портал»: серый пунктирный круг
   for (const zone of state.portalIgnore) {
-    const point = worldToImage(t, zone.x, zone.y);
+    const point = worldToImage(tf, zone.x, zone.y);
     const pos = imageToScreen(point.x, point.y);
     const radius = Math.max(8, zone.radius * WORLD_SCALE * state.zoom);
     ctx.strokeStyle = "rgba(139, 148, 158, 0.7)";
@@ -1679,7 +1681,7 @@ function draw() {
   // Порталы: вход ◎, выход ◌, для внутримировых — пунктир между ними
   for (const portal of state.portals) {
     const drawPortalMark = (p, label, isExit) => {
-      const point = worldToImage(t, p.x, p.y);
+      const point = worldToImage(tf, p.x, p.y);
       const pos = imageToScreen(point.x, point.y);
       ctx.strokeStyle = "#c084fc";
       ctx.lineWidth = 2;
@@ -1720,7 +1722,7 @@ function draw() {
 
   // Вейпоинты (мир просмотра)
   for (const wp of state.waypoints) {
-    const point = worldToImage(t, wp.x, wp.y);
+    const point = worldToImage(tf, wp.x, wp.y);
     const pos = imageToScreen(point.x, point.y);
     ctx.fillStyle = "#ff59d9";
     ctx.strokeStyle = "#0d1117";
@@ -1743,7 +1745,7 @@ function draw() {
 
   // Торговцы: жёлтая монета + подпись (наведи — покажет, чем торгует)
   for (const tr of state.traders) {
-    const point = worldToImage(t, tr.x, tr.y);
+    const point = worldToImage(tf, tr.x, tr.y);
     const pos = imageToScreen(point.x, point.y);
     ctx.fillStyle = "#facc15";
     ctx.strokeStyle = "#0d1117";
@@ -1767,7 +1769,7 @@ function draw() {
   // Игроки
   if (viewing) {
     for (const player of state.players) {
-      const point = worldToImage(t, player.x, player.y);
+      const point = worldToImage(tf, player.x, player.y);
       const pos = imageToScreen(point.x, point.y);
       const color = player.isLocal ? "#3fb950" : "#58a6ff";
       const yawRad = player.yaw * Math.PI / 180;
