@@ -120,6 +120,10 @@ class DataWatcher:
                     self._last_mtime = mtime
                     if walked_store is not None:
                         walked_store.ingest(state)
+                    try:
+                        upsert_detected_traders(state)
+                    except Exception:
+                        pass  # детект торговцев не должен ронять поток данных
             except (OSError, json.JSONDecodeError):
                 # Файл ещё не создан или пишется прямо сейчас — пробуем позже
                 pass
@@ -568,6 +572,73 @@ def save_traders(traders: list):
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump({"traders": traders}, f, ensure_ascii=False, indent=2)
     os.replace(tmp, traders_path)
+
+
+# name -> {"key": ..., "kind": stationary|traveling|machine} from the web catalog
+trader_catalog: dict = {}
+
+
+def load_trader_catalog():
+    global trader_catalog
+    try:
+        with open(os.path.join(WEB_DIR, "traders-catalog.json"), encoding="utf-8") as f:
+            raw = json.load(f)
+        trader_catalog = {
+            t["name"]: {"key": t.get("key", ""), "kind": t.get("kind", "stationary")}
+            for t in raw.get("traders", [])
+        }
+    except (OSError, json.JSONDecodeError, KeyError):
+        trader_catalog = {}
+
+
+def upsert_detected_traders(state: dict):
+    """Traders the mod spotted in-game: add new ones, keep positions fresh.
+
+    Traveling traders are only recorded while the Employee Locator is worn —
+    otherwise you'd 'find' them without the item that reveals them.
+    """
+    detected = state.get("traders") or []
+    if not detected or not traders_path:
+        return
+    world = state.get("world") or "unknown"
+    if world in ("unknown", "MainMenu"):
+        return
+    locator = bool(state.get("locator"))
+
+    with traders_lock:
+        traders = load_traders()
+        changed = False
+        for det in detected:
+            name = det.get("name")
+            if not name:
+                continue
+            info = trader_catalog.get(name, {})
+            if info.get("kind") == "traveling" and not locator:
+                continue  # needs the Employee Locator trinket
+            existing = next(
+                (x for x in traders if x.get("name") == name and x.get("world") == world),
+                None)
+            try:
+                x, y, z = float(det["x"]), float(det["y"]), float(det["z"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if existing:
+                # Keep a traveling trader's position current; ignore tiny jitter
+                if math.dist((existing["x"], existing["y"], existing["z"]), (x, y, z)) > 100:
+                    existing.update(x=x, y=y, z=z)
+                    changed = True
+            else:
+                traders.append({
+                    "id": str(int(time.time() * 1000)) + "_" + info.get("key", name[:8]),
+                    "key": info.get("key", ""),
+                    "name": name,
+                    "world": world,
+                    "x": x, "y": y, "z": z,
+                    "auto": True,
+                })
+                changed = True
+        if changed:
+            save_traders(traders)
 
 
 def load_elevators() -> list:
@@ -1052,6 +1123,7 @@ def main():
     portals_path = os.path.join(persist_dir, "portals.json")
     carts_path = os.path.join(persist_dir, "carts.json")
     traders_path = os.path.join(persist_dir, "traders.json")
+    load_trader_catalog()
     notes_path = os.path.join(persist_dir, "notes.json")
     scan_store.set_elevators(load_elevators())
     walked_store = WalkedStore(os.path.join(persist_dir, "walked.json"))

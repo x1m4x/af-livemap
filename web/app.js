@@ -867,6 +867,21 @@ async function loadTraders() {
   } catch (err) { /* server unavailable */ }
 }
 
+// Мод находит торговцев сам — подтягиваем их периодически
+async function pollTraders() {
+  try {
+    if (state.viewedWorld) {
+      const resp = await fetch(`/api/traders?world=${encodeURIComponent(state.viewedWorld)}`);
+      const fresh = (await resp.json()).traders || [];
+      if (JSON.stringify(fresh) !== JSON.stringify(state.traders)) {
+        state.traders = fresh;
+        renderWaypointList();
+      }
+    }
+  } catch (err) { /* server unavailable */ }
+  setTimeout(pollTraders, 5000);
+}
+
 async function addTrader(key, name, x, y, z) {
   const resp = await fetch("/api/traders", {
     method: "POST",
@@ -2278,7 +2293,7 @@ document.getElementById("imagesClose").addEventListener("click", () => {
 // ==================== Startup ====================
 
 I18N.applyStatic();
-loadTraderCatalog().then(loadTraders);
+loadTraderCatalog().then(pollTraders);
 loadWorlds();
 connectStream();
 pollScan();

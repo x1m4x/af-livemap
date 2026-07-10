@@ -29,6 +29,17 @@ log_held_item = false
 #   auto - follow the game's language / по языку игры (default / по умолчанию)
 language = auto
 
+# Auto-detect trader NPCs and put them on the map.
+# Автоопределение NPC-торговцев и показ их на карте.
+# Traveling traders are only recorded while the Employee Locator trinket is worn.
+# Кочующие торговцы записываются, только если надет тринкет Employee Locator.
+detect_traders = true
+
+# Diagnostics: log every nearby NPC's class to the UE4SS console.
+# Диагностика: печатать класс каждого NPC рядом в консоль UE4SS.
+# Use it if a trader is not detected, then send the log. Потом верни false.
+log_npcs = false
+
 # Fully disable lidar scanning (player positions are still written).
 # Полностью выключить лидар (позиции игроков всё равно пишутся).
 scan_enabled = true

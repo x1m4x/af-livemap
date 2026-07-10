@@ -25,6 +25,29 @@ local CONFIG_FILE = MOD_DIR .. "config.txt"
 -- Player pawn blueprint class in Abiotic Factor
 local PLAYER_CLASS = "Abiotic_PlayerCharacter_C"
 
+-- Base class every character derives from (players, NPCs, traders, creatures)
+local CHARACTER_CLASS = "Abiotic_Character_ParentBP_C"
+
+-- Trader auto-detection. We don't know the traders' blueprint class names, but
+-- their in-game names are known, so we match a distinctive token against the
+-- actor/class identifiers. Traveling traders are only reported while the
+-- Employee Locator trinket is worn (see LOCATOR_MATCH).
+local DETECT_TRADERS = true
+local TRADERS = {
+    { token = "bunning",    name = "Warren Bunning" },
+    { token = "isling",     name = "Grayson Isling" },
+    { token = "marion",     name = "Marion" },
+    { token = "blacksmith", name = "The Blacksmith" },
+    { token = "larva",      name = "Big Hive Larva" },
+    { token = "carson",     name = "Dr. Carson" },
+    { token = "sanders",    name = "Jimmy Sanders" },
+    { token = "thule",      name = "Dr. Ulrich Thule" },
+}
+local LOCATOR_MATCH = "employeelocator"
+-- Diagnostics: log every non-player character's identifiers once per refresh,
+-- so unmatched traders can be found. Toggled in config.txt (log_npcs).
+local LOG_NPCS = false
+
 -- Lidar: rays per tick. 12 x 10 ticks/s = 120 rays/s spread across frames.
 local SCAN_ENABLED = true
 local SCAN_RAYS = 12
@@ -61,6 +84,8 @@ local STRINGS = {
         lidar_error      = "Lidar not working: %s",
         held_item        = "Item in hand: %s",
         collect_error    = "Collection error: %s",
+        equip_read_failed = "Could not read equipment slots - Employee Locator gating disabled",
+        npc_seen         = "NPC: %s",
     },
     ru = {
         config_not_found = "config.txt не найден - работают настройки по умолчанию",
@@ -71,6 +96,8 @@ local STRINGS = {
         lidar_error      = "Лидар не работает: %s",
         held_item        = "Предмет в руке: %s",
         collect_error    = "Ошибка сбора: %s",
+        equip_read_failed = "Не удалось прочитать слоты экипировки - гейт по Employee Locator отключён",
+        npc_seen         = "NPC: %s",
     },
 }
 
@@ -149,6 +176,10 @@ local function LoadConfig()
                 LOG_HELD_ITEM = ParseBool(value, LOG_HELD_ITEM)
             elseif key == "language" then
                 if #value > 0 then LANGUAGE = value:lower() end
+            elseif key == "detect_traders" then
+                DETECT_TRADERS = ParseBool(value, DETECT_TRADERS)
+            elseif key == "log_npcs" then
+                LOG_NPCS = ParseBool(value, LOG_NPCS)
             end
         end
     end
@@ -275,7 +306,12 @@ local function CollectPositions()
     if #players == 0 then
         return nil
     end
-    return { world = worldName, players = players }
+    local state = { world = worldName, players = players }
+    if DETECT_TRADERS then
+        state.traders = traderCache          -- авто-найденные торговцы
+        state.locator = locatorEquipped      -- надет ли Employee Locator
+    end
+    return state
 end
 
 -- ==================== Rat Scanner detection ====================
@@ -325,6 +361,89 @@ local function IsHoldingScanner(pawn)
         end
     end)
     return match
+end
+
+-- ==================== Trader detection ====================
+-- Refreshed on the same cadence as the pawn cache (FindAllOf is costly).
+
+local traderCache = {}       -- {name, x, y, z}
+local locatorEquipped = false
+local equipReadFailed = false
+
+local function Normalize(s)
+    return (s:lower():gsub("[^a-z0-9]", ""))
+end
+
+-- Employee Locator sits in a trinket slot. Gear slots (Lua 1-based):
+-- Trinket = 8, Trinket2 = 12 (AFUtils.GearInventoryIndex).
+local ITEM_ROW_FIELD = "ItemDataTable_18_BF1052F141F66A976F4844AB2B13062B"
+
+local function IsLocatorEquipped(pawn)
+    local found = false
+    local ok = pcall(function()
+        local gear = pawn.CharacterEquipSlotInventory
+        if not gear or not gear:IsValid() then return end
+        local slots = gear.CurrentInventory
+        if not slots then return end
+        for _, index in ipairs({ 8, 12 }) do
+            if #slots >= index then
+                local row = nil
+                pcall(function()
+                    row = slots[index][ITEM_ROW_FIELD].RowName:ToString()
+                end)
+                if row and Normalize(row):find(LOCATOR_MATCH, 1, true) then
+                    found = true
+                end
+            end
+        end
+    end)
+    if not ok and not equipReadFailed then
+        equipReadFailed = true
+        Log(T("equip_read_failed"))
+    end
+    return found
+end
+
+-- Identifiers of a character we can match trader names against
+local function CharacterIds(ch)
+    local ids = {}
+    pcall(function() ids[#ids + 1] = ch:GetClass():GetFullName() end)
+    pcall(function() ids[#ids + 1] = ch:GetFullName() end)
+    return ids
+end
+
+local function RefreshTraderCache(localPawn)
+    traderCache = {}
+    if not DETECT_TRADERS then return end
+
+    locatorEquipped = localPawn and IsLocatorEquipped(localPawn) or false
+
+    local chars = FindAllOf(CHARACTER_CLASS)
+    if not chars then return end
+
+    for _, ch in ipairs(chars) do
+        if ch:IsValid() then
+            local ids = CharacterIds(ch)
+            local blob = Normalize(table.concat(ids, " "))
+            if not blob:find("playercharacter", 1, true) then
+                if LOG_NPCS and #ids > 0 then
+                    Log(T("npc_seen", ids[1]))
+                end
+                for _, trader in ipairs(TRADERS) do
+                    if blob:find(trader.token, 1, true) then
+                        local okLoc, loc = pcall(function() return ch:K2_GetActorLocation() end)
+                        if okLoc and loc then
+                            traderCache[#traderCache + 1] = {
+                                name = trader.name,
+                                x = loc.X, y = loc.Y, z = loc.Z,
+                            }
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end
 end
 
 -- ==================== Lidar ====================
@@ -417,6 +536,9 @@ local function CollectOnGameThread()
     if ticksSinceRefresh >= CACHE_REFRESH_TICKS then
         ticksSinceRefresh = 0
         RefreshPawnCache()
+        -- Торговцы обновляются на том же такте: FindAllOf дорогой
+        local localPawn = UEHelpers.GetPlayer()
+        pcall(RefreshTraderCache, (localPawn and localPawn:IsValid()) and localPawn or nil)
     end
     ticksSinceRefresh = ticksSinceRefresh + 1
 
