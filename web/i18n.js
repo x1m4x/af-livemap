@@ -112,6 +112,17 @@ const I18N = (() => {
       coords: "{x}, {y} m | zoom: {zoom}",
       hud_distance: "{name} ({dist} m)",
 
+      // traders
+      add_trader: "+ Trader",
+      add_trader_title: "Save the trader you're standing next to",
+      pick_trader: "Which trader is this? (saved at your position)",
+      add_btn: "Add",
+      cancel_btn: "Cancel",
+      trader_label: "🛒 {name}",
+      confirm_delete_trader: "Delete trader \"{name}\"?",
+      trader_sells_nothing: "No trade data for this trader.",
+      trader_unlock: "Unlocked: {text}",
+
       // notes
       notes_synced: "synced",
       notes_server_down: "server unavailable",
@@ -216,6 +227,16 @@ const I18N = (() => {
       webgl_unavailable: "WebGL недоступен в этом браузере.",
       coords: "{x}, {y} м | zoom: {zoom}",
       hud_distance: "{name} ({dist} м)",
+
+      add_trader: "+ Торговец",
+      add_trader_title: "Сохранить торговца, рядом с которым ты стоишь",
+      pick_trader: "Какой это торговец? (сохранится на твоей позиции)",
+      add_btn: "Добавить",
+      cancel_btn: "Отмена",
+      trader_label: "🛒 {name}",
+      confirm_delete_trader: "Удалить торговца «{name}»?",
+      trader_sells_nothing: "Нет данных об обменах для этого торговца.",
+      trader_unlock: "Открывается: {text}",
 
       notes_synced: "синхронизировано",
       notes_server_down: "сервер недоступен",

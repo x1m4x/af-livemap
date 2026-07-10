@@ -551,6 +551,25 @@ def save_carts(carts: list):
     os.replace(tmp, carts_path)
 
 
+traders_path: str = ""
+traders_lock = threading.Lock()
+
+
+def load_traders() -> list:
+    try:
+        with open(traders_path, "r", encoding="utf-8") as f:
+            return json.load(f).get("traders", [])
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def save_traders(traders: list):
+    tmp = traders_path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"traders": traders}, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, traders_path)
+
+
 def load_elevators() -> list:
     try:
         with open(elevators_path, "r", encoding="utf-8") as f:
@@ -673,6 +692,15 @@ class Handler(BaseHTTPRequestHandler):
             if world:
                 carts = [c for c in carts if c.get("world") == world]
             self._send_json({"carts": carts})
+        elif path == "/api/traders":
+            from urllib.parse import parse_qs, urlparse
+            query = parse_qs(urlparse(self.path).query)
+            world = (query.get("world") or [None])[0]
+            with traders_lock:
+                traders = load_traders()
+            if world:
+                traders = [x for x in traders if x.get("world") == world]
+            self._send_json({"traders": traders})
         elif path == "/api/walked":
             assert walked_store is not None
             from urllib.parse import parse_qs, urlparse
@@ -898,6 +926,40 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json({"ok": True})
                 else:
                     self._send_json({"error": "unknown action"}, 400)
+        elif path == "/api/traders":
+            length = int(self.headers.get("Content-Length", 0))
+            try:
+                payload = json.loads(self.rfile.read(length))
+            except json.JSONDecodeError:
+                self._send_json({"error": "invalid json"}, 400)
+                return
+            action = payload.get("action")
+            with traders_lock:
+                traders = load_traders()
+                if action == "add":
+                    trader = {
+                        "id": str(int(time.time() * 1000)),
+                        # key links to web/traders-catalog.json (trade list, icons)
+                        "key": str(payload.get("key") or "")[:64],
+                        "name": str(payload.get("name") or "Trader")[:64],
+                        "world": payload.get("world") or "unknown",
+                        "x": float(payload.get("x", 0)),
+                        "y": float(payload.get("y", 0)),
+                        "z": float(payload.get("z", 0)),
+                    }
+                    traders.append(trader)
+                    save_traders(traders)
+                    self._send_json({"ok": True, "trader": trader})
+                elif action == "delete":
+                    traders = [x for x in traders if x.get("id") != payload.get("id")]
+                    save_traders(traders)
+                    self._send_json({"ok": True})
+                elif action == "rename":
+                    if rename_in(traders, payload.get("id"), str(payload.get("name") or "Trader")):
+                        save_traders(traders)
+                    self._send_json({"ok": True})
+                else:
+                    self._send_json({"error": "unknown action"}, 400)
         elif path == "/api/maps":
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length)
@@ -984,11 +1046,12 @@ def main():
     os.makedirs(persist_dir, exist_ok=True)
     scan_store = ScanStore(lidar_path, os.path.join(persist_dir, "scan.json"), carve=args.carve)
 
-    global waypoints_path, elevators_path, portals_path, carts_path, notes_path
+    global waypoints_path, elevators_path, portals_path, carts_path, notes_path, traders_path
     waypoints_path = os.path.join(persist_dir, "waypoints.json")
     elevators_path = os.path.join(persist_dir, "elevators.json")
     portals_path = os.path.join(persist_dir, "portals.json")
     carts_path = os.path.join(persist_dir, "carts.json")
+    traders_path = os.path.join(persist_dir, "traders.json")
     notes_path = os.path.join(persist_dir, "notes.json")
     scan_store.set_elevators(load_elevators())
     walked_store = WalkedStore(os.path.join(persist_dir, "walked.json"))

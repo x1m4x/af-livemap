@@ -16,6 +16,7 @@
   <button id="addWaypointBtn" data-i18n="add_waypoint" data-i18n-title="add_waypoint_title"></button>
   <button id="elevatorBtn" data-i18n="elevator" data-i18n-title="elevator_title"></button>
   <button id="cartBtn" data-i18n="cart" data-i18n-title="cart_title"></button>
+  <button id="addTraderBtn" data-i18n="add_trader" data-i18n-title="add_trader_title"></button>
   <button id="waypointsBtn" data-i18n="waypoints_btn"></button>
   <button id="imagesBtn" data-i18n="images_btn"></button>
   <button id="notesBtn" data-i18n="notes_btn"></button>
@@ -44,6 +45,15 @@
   </div>
   <div id="imageWrap"><img id="imageView" data-i18n-alt="image_alt"></div>
 </div>
+<div id="traderPickPopup" class="hidden">
+  <div id="traderPickTitle" data-i18n="pick_trader"></div>
+  <select id="traderPickSelect"></select>
+  <div id="traderPickButtons">
+    <button id="traderPickAdd" data-i18n="add_btn"></button>
+    <button id="traderPickCancel" data-i18n="cancel_btn"></button>
+  </div>
+</div>
+<div id="traderTooltip" class="hidden"></div>
 <canvas id="map"></canvas>
 <canvas id="map3d" class="hidden"></canvas>
 <canvas id="hud3d" class="hidden"></canvas>

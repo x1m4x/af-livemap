@@ -1,0 +1,2260 @@
+{
+ "_source": "https://abioticfactor.wiki.gg/wiki/Trading",
+ "_note": "Trade data and icon URLs come from the Abiotic Factor Wiki (wiki.gg). Icons are hotlinked, not bundled.",
+ "traders": [
+  {
+   "key": "warren_bunning",
+   "name": "Warren Bunning",
+   "kind": "stationary",
+   "location": "Office Sector",
+   "trades": [
+    {
+     "buy": [
+      {
+       "name": "GATE Security Key",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_key_gatesecurity.png/64px-Itemicon_key_gatesecurity.png?2343bb"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Nyxshade Seed",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_human_skull_dark.png/64px-Itemicon_human_skull_dark.png?9dd195"
+      }
+     ],
+     "unlocked": "Entering The Night Realm"
+    },
+    {
+     "buy": [
+      {
+       "name": "Magnetic Alloy",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_alloy.png/64px-Itemicon_alloy.png?71f44b"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Night Essence",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_reaper_essence.png/64px-Itemicon_reaper_essence.png?98c932"
+      }
+     ],
+     "unlocked": "Opening Gate 2 in the Security Sector"
+    },
+    {
+     "buy": [
+      {
+       "name": "Light Gun Repair Kit",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Light_Gun_Repair_Kit.png/64px-Item_Icon_-_Light_Gun_Repair_Kit.png?b3dd09"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Computation Brick",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_cpublock.png/64px-Itemicon_cpublock.png?328ac0"
+      }
+     ],
+     "unlocked": "Meeting The Blacksmith"
+    },
+    {
+     "buy": [
+      {
+       "name": "Canned Peas",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Canned_Peas.png/64px-Item_Icon_-_Canned_Peas.png?2aceaf"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Rootbear",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Rootbear.png/64px-Item_Icon_-_Rootbear.png?fec208"
+      }
+     ],
+     "unlocked": "Speaking with Warren"
+    },
+    {
+     "buy": [
+      {
+       "name": "Employee Locator",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Employee_Locator.png/64px-Item_Icon_-_Employee_Locator.png?c31762"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Peccary Skull",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Peccary_Skull.png/64px-Item_Icon_-_Peccary_Skull.png?f52e83"
+      }
+     ]
+    },
+    {
+     "buy": [
+      {
+       "name": "Stapler",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Stapler.png/64px-Item_Icon_-_Stapler.png?df3788"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Raw Antefish Filet",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_filet_antefish_raw.png/64px-Itemicon_filet_antefish_raw.png?1f319e"
+      }
+     ],
+     "unlocked": "Going through the Far Garden exit portal"
+    }
+   ]
+  },
+  {
+   "key": "grayson_isling",
+   "name": "Grayson Isling",
+   "kind": "traveling",
+   "location": "Office Sector",
+   "trades": [
+    {
+     "buy": [
+      {
+       "name": "Hard Hat",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_armor_hardhat.png/64px-Itemicon_armor_hardhat.png?ff0164"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Salt",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Salt.png/64px-Item_Icon_-_Salt.png?67b806"
+      }
+     ],
+     "extra": {
+      "stock": "N/A"
+     },
+     "unlocked": "Entering Manufacturing West"
+    },
+    {
+     "buy": [
+      {
+       "name": "High-Vis Vest",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_safetyvest.png/64px-Itemicon_safetyvest.png?28b152"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Super Tomato",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Super_Tomato.png/64px-Item_Icon_-_Super_Tomato.png?8523e3"
+      }
+     ]
+    },
+    {
+     "buy": [
+      {
+       "name": "9mm Ammo",
+       "qty": 4,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_9mm_Ammo.png/64px-Item_Icon_-_9mm_Ammo.png?847a47"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Robot Oil",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Robot_Oil.png/64px-Item_Icon_-_Robot_Oil.png?5ba27c"
+      }
+     ],
+     "extra": {
+      "stock": "3"
+     }
+    },
+    {
+     "buy": [
+      {
+       "name": "12g Buckshot",
+       "qty": 2,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_12g_Buckshot.png/64px-Item_Icon_-_12g_Buckshot.png?cf9290"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Wood Plank",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Wood_Plank.png/64px-Item_Icon_-_Wood_Plank.png?a5c5c7"
+      }
+     ],
+     "extra": {
+      "stock": "4"
+     },
+     "unlocked": "Entering Containment Block Dirac in Cascade Laboratories"
+    },
+    {
+     "buy": [
+      {
+       "name": ".357 Magnum Ammo",
+       "qty": 3,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_.357_Magnum_Ammo.png/64px-Item_Icon_-_.357_Magnum_Ammo.png?861f09"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Chain",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_chains.png/64px-Itemicon_chains.png?372ea9"
+      }
+     ],
+     "extra": {
+      "stock": "2"
+     },
+     "unlocked": "Entering Manufacturing West"
+    },
+    {
+     "buy": [
+      {
+       "name": ".308 Ammo",
+       "qty": 2,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_.308_Ammo.png/64px-Item_Icon_-_.308_Ammo.png?ec175c"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Reservoir Growth",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_IS-0142.png/64px-Itemicon_IS-0142.png?e74150"
+      }
+     ],
+     "extra": {
+      "stock": "3"
+     },
+     "unlocked": "Reaching the central part of the dam in Hydroplant"
+    },
+    {
+     "buy": [
+      {
+       "name": "5.56 Ammo",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_5.56_Ammo.png/64px-Item_Icon_-_5.56_Ammo.png?e121fd"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Magnetic Alloy",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_alloy.png/64px-Itemicon_alloy.png?71f44b"
+      }
+     ],
+     "extra": {
+      "stock": "10"
+     }
+    },
+    {
+     "buy": [
+      {
+       "name": "Intermediate Gun Repair Kit",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_repairkit_white.png/64px-Itemicon_repairkit_white.png?3337ae"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Reinforced CPU",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_cpu_gold.png/64px-Itemicon_cpu_gold.png?c65802"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     }
+    }
+   ]
+  },
+  {
+   "key": "marion",
+   "name": "Marion",
+   "kind": "traveling",
+   "location": "Flathill",
+   "trades": [
+    {
+     "buy": [
+      {
+       "name": "Gravity Dampener",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_antigravity_cube.png/64px-Itemicon_antigravity_cube.png?2e2dcf"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Sigil of the Hearth",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Sigil_of_the_Hearth.png/64px-Item_Icon_-_Sigil_of_the_Hearth.png?7abf3a"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": "Entering Containment Block Dirac in Cascade Laboratories"
+    },
+    {
+     "buy": [
+      {
+       "name": "Reinforced Hose",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Reinforced_Hose.png/64px-Item_Icon_-_Reinforced_Hose.png?5fe946"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Tiny Gears",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Tiny_Gears.png/64px-Item_Icon_-_Tiny_Gears.png?d4021b"
+      }
+     ],
+     "extra": {
+      "stock": "4"
+     },
+     "unlocked": "Completing The Train"
+    },
+    {
+     "buy": [
+      {
+       "name": "Porcelain Key",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_key_porcelain.png/64px-Itemicon_key_porcelain.png?e99f67"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Symphonist Head",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Symphonist_Head.png/64px-Item_Icon_-_Symphonist_Head.png?f2634b"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": "Completing Flathill"
+    },
+    {
+     "buy": [
+      {
+       "name": "Power Cell",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Power_Cell.png/64px-Item_Icon_-_Power_Cell.png?e7ae9c"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Ornate Key",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_key_orderornate.png/64px-Itemicon_key_orderornate.png?94783c"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     }
+    },
+    {
+     "buy": [
+      {
+       "name": "Porcelain Shards",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Porcelain_Shards.png/64px-Item_Icon_-_Porcelain_Shards.png?5595bb"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Bandage",
+       "qty": 10,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_bandage.png/64px-Itemicon_bandage.png?e2172c"
+      }
+     ],
+     "extra": {
+      "stock": "5"
+     }
+    },
+    {
+     "buy": [
+      {
+       "name": "Partial Organ",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_PartialOrgan.png/64px-Itemicon_PartialOrgan.png?e2da90"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Anomaly",
+       "qty": 3,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_anomaly.png/64px-Itemicon_anomaly.png?730c0a"
+      }
+     ],
+     "extra": {
+      "stock": "3"
+     }
+    },
+    {
+     "buy": [
+      {
+       "name": "Pens",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Pens.png/64px-Item_Icon_-_Pens.png?fa2643"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Healing Syringe",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_healing_syringe.png/64px-Itemicon_healing_syringe.png?3c1da7"
+      }
+     ],
+     "extra": {
+      "stock": "5"
+     }
+    },
+    {
+     "buy": [
+      {
+       "name": "Plutonic Carapace",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Plutonic_Carapace.png/64px-Item_Icon_-_Plutonic_Carapace.png?96f32e"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Arcane Scrap",
+       "qty": 5,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_scrap_arcane.png/64px-Itemicon_scrap_arcane.png?cb7601"
+      }
+     ],
+     "extra": {
+      "stock": "2"
+     },
+     "unlocked": "Clearing the fungus in Power Services in the Reactors"
+    },
+    {
+     "buy": [
+      {
+       "name": "Antique Shotgun",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_doublebarrel_shotgun.png/64px-Itemicon_doublebarrel_shotgun.png?f669c6"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Lodestone",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_lodestone1.png/64px-Itemicon_lodestone1.png?89b345"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": "Completing the Security Sector"
+    }
+   ]
+  },
+  {
+   "key": "the_blacksmith",
+   "name": "The Blacksmith",
+   "kind": "stationary",
+   "location": "Manufacturing West",
+   "trades": [
+    {
+     "buy": [
+      {
+       "name": "Optic Lens",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Optic_Lens.png/64px-Item_Icon_-_Optic_Lens.png?21e54f"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Reinforced Hose",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Reinforced_Hose.png/64px-Item_Icon_-_Reinforced_Hose.png?5fe946"
+      }
+     ],
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Diode",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_diode.png/64px-Itemicon_diode.png?302413"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Axle Grease",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_grease.png/64px-Itemicon_grease.png?62446b"
+      }
+     ],
+     "unlocked": "Meeting Sarah Frake"
+    },
+    {
+     "buy": [
+      {
+       "name": "Fibre Optic Cable",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_FibreOpticCable1.png/64px-Itemicon_FibreOpticCable1.png?23d540"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Solder (Material)",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Solder_%28Material%29.png/64px-Item_Icon_-_Solder_%28Material%29.png?173c45"
+      }
+     ]
+    },
+    {
+     "buy": [
+      {
+       "name": "Fire Proximity Suit",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Fire_Proximity_Suit.png/64px-Item_Icon_-_Fire_Proximity_Suit.png?ed99d7"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Air Compressor",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_aircompressor.png/64px-Itemicon_aircompressor.png?8eb939"
+      }
+     ],
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Cement Bag",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_cementbag.png/64px-Itemicon_cementbag.png?860f0c"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Metal Scrap",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Metal_Scrap.png/64px-Item_Icon_-_Metal_Scrap.png?23b16d"
+      }
+     ],
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Anvil",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_anvil.png/64px-Itemicon_anvil.png?4fa083"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Security Bot CPU",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Security_Bot_CPU.png/64px-Item_Icon_-_Security_Bot_CPU.png?1e6994"
+      }
+     ],
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Steel Cable",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Steel_Cable.png/64px-Item_Icon_-_Steel_Cable.png?33577a"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Military Electronics",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Military_Electronics.png/64px-Item_Icon_-_Military_Electronics.png?b56c6c"
+      }
+     ],
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Hydrochloric Acid",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_acid.png/64px-Itemicon_acid.png?a36185"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Anteverse Wheat",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Anteverse_Wheat.png/64px-Item_Icon_-_Anteverse_Wheat.png?88dfd6"
+      }
+     ],
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Rebar",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_rebar.png/64px-Itemicon_rebar.png?dfcc8f"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Anomaly",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_anomaly.png/64px-Itemicon_anomaly.png?730c0a"
+      }
+     ],
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Welding Mask",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Welding_Mask.png/64px-Item_Icon_-_Welding_Mask.png?ba0e97"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Order Helmet",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Order_Helmet.png/64px-Order_Helmet.png?568538"
+      }
+     ],
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Blacksmithing Gloves",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Blacksmithing_Gloves.png/64px-Item_Icon_-_Blacksmithing_Gloves.png?abac13"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Captain's Beret",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Captain%27s_Beret.png/64px-Item_Icon_-_Captain%27s_Beret.png?4eaee0"
+      }
+     ],
+     "unlocked": null
+    }
+   ]
+  },
+  {
+   "key": "big_hive_larva",
+   "name": "Big Hive Larva",
+   "kind": "stationary",
+   "location": "The Encroachment",
+   "trades": [
+    {
+     "buy": [
+      {
+       "name": "Big Hive Larva Figurine",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_mgt_figurine_larva_big_orange.png/64px-Itemicon_mgt_figurine_larva_big_orange.png?6bfd55"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Gem Crab",
+       "qty": 5,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Gem_Crab.png/64px-Item_Icon_-_Gem_Crab.png?6ec7c9"
+      }
+     ]
+    },
+    {
+     "buy": [
+      {
+       "name": "Gem Crab Bait",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_bait_crab_gem.png/64px-Itemicon_bait_crab_gem.png?4dde19"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Powdered Crystal",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Powdered_Crystal.png/64px-Item_Icon_-_Powdered_Crystal.png?cabd3a"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "quantum_exchanger",
+   "name": "Quantum Exchanger",
+   "kind": "machine",
+   "location": "Cascade Laboratories, Flathill, Reactors",
+   "trades": [
+    {
+     "cost": [
+      {
+       "name": "Silver Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Silver_Scrap.png/24px-Item_Icon_-_Silver_Scrap.png?f5e194"
+      }
+     ],
+     "buy": [
+      {
+       "name": "Refined Carbon",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Refined_Carbon.png/24px-Item_Icon_-_Refined_Carbon.png?2d7f52"
+      }
+     ],
+     "extra": {
+      "location": "Cascade Laboratories, next to the Cellular Lab on Level 2."
+     }
+    },
+    {
+     "cost": [
+      {
+       "name": "Anteverse Wheat",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Anteverse_Wheat.png/24px-Item_Icon_-_Anteverse_Wheat.png?88dfd6"
+      }
+     ],
+     "buy": [
+      {
+       "name": "Anteverse Gem",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_crystal.png/24px-Itemicon_crystal.png?ae5b95"
+      }
+     ],
+     "extra": {
+      "location": "Cascade Laboratories, in an unmarked lab on Level 3, near a Breacher."
+     }
+    },
+    {
+     "cost": [
+      {
+       "name": "Anteverse Gem",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_crystal.png/24px-Itemicon_crystal.png?ae5b95"
+      }
+     ],
+     "buy": [
+      {
+       "name": "Liquid Crystal",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Liquid_Crystal.png/24px-Item_Icon_-_Liquid_Crystal.png?a7f11b"
+      }
+     ],
+     "extra": {
+      "location": "Cascade Laboratories, in the room with wounded soldiers on Level 2."
+     }
+    },
+    {
+     "cost": [
+      {
+       "name": "Leyak Essence",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_nightmare_essence.png/24px-Itemicon_nightmare_essence.png?392e4a"
+      }
+     ],
+     "buy": [
+      {
+       "name": "Greyeb Seed",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_greyeb_seed.png/24px-Itemicon_greyeb_seed.png?c24242"
+      }
+     ],
+     "extra": {
+      "location": "Cascade Laboratories, in the Cold Storage room on Level 2, near a Lab Rat."
+     }
+    },
+    {
+     "cost": [
+      {
+       "name": "Corrupted Corn",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_infectedcorn.png/24px-Itemicon_infectedcorn.png?5438ca"
+      }
+     ],
+     "buy": [
+      {
+       "name": "Purified Corn",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_food_corn.png/24px-Itemicon_food_corn.png?2f2a2f"
+      }
+     ],
+     "extra": {
+      "location": "Flathill, in a Flathill Syrup Co. room blocked by fungus."
+     }
+    },
+    {
+     "cost": [
+      {
+       "name": "Plutonic Carapace",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Plutonic_Carapace.png/24px-Item_Icon_-_Plutonic_Carapace.png?96f32e"
+      }
+     ],
+     "buy": [
+      {
+       "name": "Plutonic Blood",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Plutonic_Blood.png/24px-Item_Icon_-_Plutonic_Blood.png?5694bd"
+      }
+     ],
+     "extra": {
+      "location": "Reactors, in the Atomic Division offices in the Dusk Reactor"
+     }
+    }
+   ]
+  },
+  {
+   "key": "dr_carson",
+   "name": "Dr. Carson",
+   "kind": "traveling",
+   "location": "Security Sector",
+   "trades": [
+    {
+     "buy": [
+      {
+       "name": "Carson Family Cookbook",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_cookbook.png/64px-Itemicon_cookbook.png?436ab3"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Heater",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Heater.png/64px-Item_Icon_-_Heater.png?904e8a"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Frying Pan",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Frying_Pan.png/64px-Item_Icon_-_Frying_Pan.png?6dc3a1"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Pens",
+       "qty": 8,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Pens.png/64px-Item_Icon_-_Pens.png?fa2643"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Cooking Pot",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Cooking_Pot.png/64px-Item_Icon_-_Cooking_Pot.png?3f3b24"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Rubber Band Ball",
+       "qty": 8,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Rubber_Band_Ball.png/64px-Item_Icon_-_Rubber_Band_Ball.png?ee42dc"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Space Lettuce Seed",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_spacelettuce_seed.png/64px-Itemicon_spacelettuce_seed.png?20aea0"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Glowstick",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_glowstick.png/64px-Itemicon_glowstick.png?c4bdc6"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Xanterium Rice Seed",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_riceseed.png/64px-Itemicon_riceseed.png?dae297"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Glow Tulip",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Glow_Tulip.png/64px-Glow_Tulip.png?b49391"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Cooked Porkchop",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Cooked_Porkchop.png/64px-Item_Icon_-_Cooked_Porkchop.png?3f8851"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Raw Exor Heart",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Raw_Exor_Heart.png/64px-Item_Icon_-_Raw_Exor_Heart.png?16ef4c"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Potato",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_potato.png/64px-Itemicon_potato.png?a1fe00"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Skip",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Skip.png/64px-Item_Icon_-_Skip.png?b854be"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Murkweed",
+       "qty": 3,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_seaweed.png/64px-Itemicon_seaweed.png?e3ca1e"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Cog",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_cog.png/64px-Itemicon_cog.png?1c8848"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": "The Hydroplant icon shown in the journal"
+    },
+    {
+     "buy": [
+      {
+       "name": "Vanilla Latte",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_mug_latte_vanilla.png/64px-Itemicon_mug_latte_vanilla.png?daad34"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Slushie",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Slushie.png/64px-Item_Icon_-_Slushie.png?fb65fb"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": null
+    },
+    {
+     "buy": [
+      {
+       "name": "Pumpkin Splice Latte",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_mug_latte_pumpkin.png/64px-Itemicon_mug_latte_pumpkin.png?b139db"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Pumpkin",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_pumpkin.png/64px-Itemicon_pumpkin.png?9e1ab0"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": "Completing Canaan"
+    },
+    {
+     "buy": [
+      {
+       "name": "Hot Apple Cider",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_mug_cider_apple.png/64px-Itemicon_mug_cider_apple.png?416a44"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Apple",
+       "qty": 2,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_apple.png/64px-Itemicon_apple.png?42f6ef"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     }
+    },
+    {
+     "buy": [
+      {
+       "name": "Gusto Goo",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_soda_energy_1.png/64px-Itemicon_soda_energy_1.png?5cda5c"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Leyak Essence",
+       "qty": 2,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_nightmare_essence.png/64px-Itemicon_nightmare_essence.png?392e4a"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     },
+     "unlocked": null
+    }
+   ]
+  },
+  {
+   "key": "jimmy_sanders",
+   "name": "Jimmy Sanders",
+   "kind": "stationary",
+   "location": "Residence Sector",
+   "trades": [
+    {
+     "buy": [
+      {
+       "name": "Taco",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_food_taco.png/64px-Itemicon_food_taco.png?1e9148"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Anomaly",
+       "qty": 10,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_anomaly.png/64px-Itemicon_anomaly.png?730c0a"
+      }
+     ]
+    },
+    {
+     "buy": [
+      {
+       "name": "Icon top M FastFood.png",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Icon_top_M_FastFood.png/64px-Icon_top_M_FastFood.png?b3e7ee"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Shadowberry Milkshake",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Shadowberry_Milkshake.png/64px-Item_Icon_-_Shadowberry_Milkshake.png?21bb2a"
+      }
+     ]
+    },
+    {
+     "buy": [
+      {
+       "name": "Icon top F FastFood.png",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Icon_top_F_FastFood.png/64px-Icon_top_F_FastFood.png?af9a99"
+      }
+     ],
+     "cost": [
+      {
+       "name": "The Bad Soda",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_soda_bad.png/64px-Itemicon_soda_bad.png?77fd02"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "dr_ulrich_thule",
+   "name": "Dr. Ulrich Thule",
+   "kind": "stationary",
+   "location": "Office Sector",
+   "trades": [
+    {
+     "buy": [
+      {
+       "name": "Carbon Plating",
+       "qty": 2,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_carbonplating.png/64px-Itemicon_carbonplating.png?5c1801"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Mug of Coffee",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_mug_coffee.png/64px-Itemicon_mug_coffee.png?c1aec5"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     }
+    },
+    {
+     "buy": [
+      {
+       "name": "Liquid Crystal",
+       "qty": 2,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Liquid_Crystal.png/64px-Item_Icon_-_Liquid_Crystal.png?a7f11b"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Mug of Coffee",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_mug_coffee.png/64px-Itemicon_mug_coffee.png?c1aec5"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     }
+    },
+    {
+     "buy": [
+      {
+       "name": "Pink Antelight Seed",
+       "qty": 1,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_seed_antelight_pink.png/64px-Itemicon_seed_antelight_pink.png?6a9408"
+      }
+     ],
+     "cost": [
+      {
+       "name": "Mug of Coffee",
+       "qty": 2,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_mug_coffee.png/64px-Itemicon_mug_coffee.png?c1aec5"
+      }
+     ],
+     "extra": {
+      "stock": "1"
+     }
+    }
+   ]
+  },
+  {
+   "key": "wishing_shelf",
+   "name": "Wishing Shelf",
+   "kind": "machine",
+   "location": "North Pole",
+   "trades": [
+    {
+     "cost": [
+      {
+       "name": "Metal Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Metal_Scrap.png/24px-Item_Icon_-_Metal_Scrap.png?23b16d"
+      }
+     ],
+     "note": "15 - 20"
+    },
+    {
+     "cost": [
+      {
+       "name": "Plastic Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Plastic_Scrap.png/24px-Item_Icon_-_Plastic_Scrap.png?8d3428"
+      }
+     ],
+     "note": "15 - 20"
+    },
+    {
+     "cost": [
+      {
+       "name": "Bio Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_scrap_bio.png/24px-Itemicon_scrap_bio.png?7e8bcf"
+      }
+     ],
+     "note": "15 - 20"
+    },
+    {
+     "cost": [
+      {
+       "name": "Tech Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Tech_Scrap.png/24px-Item_Icon_-_Tech_Scrap.png?3a0d62"
+      }
+     ],
+     "note": "10 - 15"
+    },
+    {
+     "cost": [
+      {
+       "name": "Glass Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_scrap_glass.png/24px-Itemicon_scrap_glass.png?907eba"
+      }
+     ],
+     "note": "10 - 15"
+    },
+    {
+     "cost": [
+      {
+       "name": "Pens",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Pens.png/24px-Item_Icon_-_Pens.png?fa2643"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Rubber Band Ball",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Rubber_Band_Ball.png/24px-Item_Icon_-_Rubber_Band_Ball.png?ee42dc"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Duct Tape",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_ducttape.png/24px-Itemicon_ducttape.png?899115"
+      }
+     ],
+     "note": "5 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Pressure Gauge",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Pressure_Gauge.png/24px-Item_Icon_-_Pressure_Gauge.png?51206b"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Metal Pipe",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Metal_Pipe.png/24px-Item_Icon_-_Metal_Pipe.png?edbe22"
+      }
+     ],
+     "note": "5 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Circuit Board",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_circuitboard.png/24px-Itemicon_circuitboard.png?463227"
+      }
+     ],
+     "note": "5 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Case Fan",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_casefan.png/24px-Itemicon_casefan.png?e1e6c2"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Power Supply Unit",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Power_Supply_Unit.png/24px-Item_Icon_-_Power_Supply_Unit.png?ec5059"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Hose",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_hose.png/24px-Itemicon_hose.png?8ac02e"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Keyboard",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Keyboard.png/24px-Item_Icon_-_Keyboard.png?75e12d"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Coil",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_coil.png/24px-Itemicon_coil.png?81beef"
+      }
+     ],
+     "note": "5 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Magazines",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Magazines.png/24px-Item_Icon_-_Magazines.png?d18c8c"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Book",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_item_book.png/24px-Itemicon_item_book.png?54f4dd"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Soil Bag",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_soilbag.png/24px-Itemicon_soilbag.png?9dc9fe"
+      }
+     ],
+     "note": "1 - 2"
+    },
+    {
+     "cost": [
+      {
+       "name": "Bag of Feces",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_baggedpoop.png/24px-Itemicon_baggedpoop.png?dc87e3"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Box of Screws",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_screws.png/24px-Itemicon_screws.png?bb9ac6"
+      }
+     ],
+     "note": "5 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Wood Plank",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Wood_Plank.png/24px-Item_Icon_-_Wood_Plank.png?a5c5c7"
+      }
+     ],
+     "note": "15 - 20"
+    },
+    {
+     "cost": [
+      {
+       "name": "Cement Bag",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_cementbag.png/24px-Itemicon_cementbag.png?860f0c"
+      }
+     ],
+     "note": "2 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Oil",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Oil.png/24px-Item_Icon_-_Oil.png?891957"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Rebar",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_rebar.png/24px-Itemicon_rebar.png?dfcc8f"
+      }
+     ],
+     "note": "4 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Steel Cable",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Steel_Cable.png/24px-Item_Icon_-_Steel_Cable.png?33577a"
+      }
+     ],
+     "note": "4 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Optic Lens",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Optic_Lens.png/24px-Item_Icon_-_Optic_Lens.png?21e54f"
+      }
+     ],
+     "note": "1 - 2"
+    },
+    {
+     "cost": [
+      {
+       "name": "Liquid Crystal",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Liquid_Crystal.png/24px-Item_Icon_-_Liquid_Crystal.png?a7f11b"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Anteverse Gem",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_crystal.png/24px-Itemicon_crystal.png?ae5b95"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Refined Carbon",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Refined_Carbon.png/24px-Item_Icon_-_Refined_Carbon.png?2d7f52"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Capacitor",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_capacitor.png/24px-Itemicon_capacitor.png?896031"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Canister",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_compressedaircylinder.png/24px-Itemicon_compressedaircylinder.png?64b4c5"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Carapace",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_carapace.png/24px-Itemicon_carapace.png?7b75f7"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Anteverse Gel",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_anteverse_gel.png/24px-Itemicon_anteverse_gel.png?5639fb"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Toroidal Power Transformer",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Toroidal_Power_Transformer.png/24px-Item_Icon_-_Toroidal_Power_Transformer.png?3a2a08"
+      }
+     ],
+     "note": "1 - 3"
+    },
+    {
+     "cost": [
+      {
+       "name": "Rotary Pump",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Rotary_Pump.png/24px-Item_Icon_-_Rotary_Pump.png?3e626b"
+      }
+     ],
+     "note": "1 - 3"
+    },
+    {
+     "cost": [
+      {
+       "name": "Cracked Shoulder Light",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_light_cracked.png/24px-Itemicon_light_cracked.png?5df517"
+      }
+     ],
+     "note": "1 - 3"
+    },
+    {
+     "cost": [
+      {
+       "name": "Military Electronics",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Military_Electronics.png/24px-Item_Icon_-_Military_Electronics.png?b56c6c"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Exor Quill",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_exorquill.png/24px-Itemicon_exorquill.png?8e9926"
+      }
+     ],
+     "note": "8 - 12"
+    },
+    {
+     "cost": [
+      {
+       "name": "Hydro Pipe",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_hydropipe.png/24px-Itemicon_hydropipe.png?4386e9"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Leather Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Leather_Scrap.png/24px-Item_Icon_-_Leather_Scrap.png?2df9ba"
+      }
+     ],
+     "note": "5 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Silver Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Silver_Scrap.png/24px-Item_Icon_-_Silver_Scrap.png?f5e194"
+      }
+     ],
+     "note": "5 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Stapler",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Stapler.png/24px-Item_Icon_-_Stapler.png?df3788"
+      }
+     ],
+     "note": "3 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Desk Phone",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_telephone.png/24px-Itemicon_telephone.png?dfeb9b"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Tiny Gears",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Tiny_Gears.png/24px-Item_Icon_-_Tiny_Gears.png?d4021b"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Chain",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_chains.png/24px-Itemicon_chains.png?372ea9"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Powdered Crystal",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Powdered_Crystal.png/24px-Item_Icon_-_Powdered_Crystal.png?cabd3a"
+      }
+     ],
+     "note": "2 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Hydrochloric Acid",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_acid.png/24px-Itemicon_acid.png?a36185"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Enethiol",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_enethiol.png/24px-Itemicon_enethiol.png?ebd644"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Salt",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Salt.png/24px-Item_Icon_-_Salt.png?67b806"
+      }
+     ],
+     "note": "5 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Magnetic Alloy",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_alloy.png/24px-Itemicon_alloy.png?71f44b"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Sensor",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_sensor.png/24px-Itemicon_sensor.png?a6d4c3"
+      }
+     ],
+     "note": "2 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Kevlar Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_kevlar.png/24px-Itemicon_kevlar.png?752c1e"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Photon Receptor",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_photonreceptor.png/24px-Itemicon_photonreceptor.png?eb4bc6"
+      }
+     ],
+     "note": "2 - 3"
+    },
+    {
+     "cost": [
+      {
+       "name": "Yeti Fur",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_yetifur.png/24px-Itemicon_yetifur.png?f5a425"
+      }
+     ],
+     "note": "1 - 3"
+    },
+    {
+     "cost": [
+      {
+       "name": "Transcendium",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Transcendium.png/24px-Item_Icon_-_Transcendium.png?24ce1e"
+      }
+     ],
+     "note": "2 - 3"
+    },
+    {
+     "cost": [
+      {
+       "name": "Plutonic Blood",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Plutonic_Blood.png/24px-Item_Icon_-_Plutonic_Blood.png?5694bd"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Plutonic Carapace",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Plutonic_Carapace.png/24px-Item_Icon_-_Plutonic_Carapace.png?96f32e"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Arcane Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_scrap_arcane.png/24px-Itemicon_scrap_arcane.png?cb7601"
+      }
+     ],
+     "note": "4 - 7"
+    },
+    {
+     "cost": [
+      {
+       "name": "Flickering Eye",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_mageeye.png/24px-Itemicon_mageeye.png?ce5cd9"
+      }
+     ],
+     "note": "2 - 4"
+    },
+    {
+     "cost": [
+      {
+       "name": "Porcelain Shards",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Porcelain_Shards.png/24px-Item_Icon_-_Porcelain_Shards.png?5595bb"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Partial Organ",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_PartialOrgan.png/24px-Itemicon_PartialOrgan.png?e2da90"
+      }
+     ],
+     "note": "1 - 3"
+    },
+    {
+     "cost": [
+      {
+       "name": "Reservoir Growth",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_IS-0142.png/24px-Itemicon_IS-0142.png?e74150"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Hexwood",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_HexedWood.png/24px-Itemicon_HexedWood.png?3d6ca5"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Lodestone Fragment",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_Lodestone_Fragment.png/24px-Itemicon_Lodestone_Fragment.png?7e1afe"
+      }
+     ],
+     "note": "4 - 6"
+    },
+    {
+     "cost": [
+      {
+       "name": "Black Gunk",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_scrap_gunk.png/24px-Itemicon_scrap_gunk.png?7747b5"
+      }
+     ],
+     "note": "5 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Lump of Coal",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_XmasCoal.png/24px-Itemicon_XmasCoal.png?5d13af"
+      }
+     ],
+     "note": "5 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Digital Ore",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_digitalore.png/24px-Itemicon_digitalore.png?2a0914"
+      }
+     ],
+     "note": "5 - 8"
+    },
+    {
+     "cost": [
+      {
+       "name": "Bag of Vibrant Feces",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_feces_skink.png/24px-Itemicon_feces_skink.png?5655c2"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Robot Oil",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Robot_Oil.png/24px-Item_Icon_-_Robot_Oil.png?5ba27c"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Aloe",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_aloe.png/24px-Itemicon_aloe.png?2100b8"
+      }
+     ],
+     "note": "3 - 5"
+    },
+    {
+     "cost": [
+      {
+       "name": "Paper Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Paper_Scrap.png/24px-Item_Icon_-_Paper_Scrap.png?b3d7e6"
+      }
+     ],
+     "note": "10 - 15"
+    },
+    {
+     "cost": [
+      {
+       "name": "Cloth Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_scrap_cloth.png/24px-Itemicon_scrap_cloth.png?1f83e0"
+      }
+     ],
+     "note": "10 - 15"
+    },
+    {
+     "cost": [
+      {
+       "name": "Coil Winding",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_coil_02.png/24px-Itemicon_coil_02.png?66b73d"
+      }
+     ],
+     "note": "1 - 3"
+    },
+    {
+     "cost": [
+      {
+       "name": "ExpandInput Item",
+       "qty": null,
+       "icon": null
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Fibre Optic Cable",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_FibreOpticCable1.png/24px-Itemicon_FibreOpticCable1.png?23d540"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Security Bot CPU",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Security_Bot_CPU.png/24px-Item_Icon_-_Security_Bot_CPU.png?1e6994"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Power Cell",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Power_Cell.png/24px-Item_Icon_-_Power_Cell.png?e7ae9c"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Anvil",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_anvil.png/24px-Itemicon_anvil.png?4fa083"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Diode",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_diode.png/24px-Itemicon_diode.png?302413"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Car Battery Charger",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_batterycharger.png/24px-Itemicon_batterycharger.png?72258a"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Night Essence",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_reaper_essence.png/24px-Itemicon_reaper_essence.png?98c932"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Axle Grease",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_grease.png/24px-Itemicon_grease.png?62446b"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Tarasque Ichor",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Tarasque_Ichor.png/24px-Item_Icon_-_Tarasque_Ichor.png?a71ca1"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Exquisite Chain",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_silverchain.png/24px-Itemicon_silverchain.png?4dab0d"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Reinforced CPU",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_cpu_gold.png/24px-Itemicon_cpu_gold.png?c65802"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Empty Mug",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_mug.png/24px-Itemicon_mug.png?afd4c1"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Jailbroken CPU",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Jailbroken_CPU.png/24px-Item_Icon_-_Jailbroken_CPU.png?35a627"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Leyak Essence",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_nightmare_essence.png/24px-Itemicon_nightmare_essence.png?392e4a"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Heart of Corruption",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_heartofcorruption.png/24px-Itemicon_heartofcorruption.png?c6c446"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Light Gun Repair Kit",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Light_Gun_Repair_Kit.png/24px-Item_Icon_-_Light_Gun_Repair_Kit.png?b3dd09"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Intermediate Gun Repair Kit",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_repairkit_white.png/24px-Itemicon_repairkit_white.png?3337ae"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Glow Eye",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_GlowEye1.png/24px-Itemicon_GlowEye1.png?9f88e7"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Fish Oil",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_oil_fish.png/24px-Itemicon_oil_fish.png?c4aa6f"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Black Oil",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_oil_black.png/24px-Itemicon_oil_black.png?6fb204"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Neutrino Mapper",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_neutrinomapper.png/24px-Itemicon_neutrinomapper.png?622afb"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Beeswax",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_beeswax.png/24px-Itemicon_beeswax.png?2031b2"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "PETN",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_PETN.png/24px-Item_Icon_-_PETN.png?eff614"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Embellished Censer",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_witchcenser.png/24px-Itemicon_witchcenser.png?6e0fe2"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Smashed GATE NVGs",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Smashed_GATE_NVGs.png/24px-Item_Icon_-_Smashed_GATE_NVGs.png?cd4fb4"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Core Fragment",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_mgt_fragment_core.png/24px-Itemicon_mgt_fragment_core.png?298481"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Frozen Essence",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_essence_frozen.png/24px-Itemicon_essence_frozen.png?9bfbfa"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Tactical Scrap",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_scrap_order.png/24px-Itemicon_scrap_order.png?6fb520"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Sugar Crystal",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Itemicon_sugarcrystal.png/24px-Itemicon_sugarcrystal.png?a9d309"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Motor",
+       "qty": null,
+       "icon": "https://abioticfactor.wiki.gg/images/thumb/Item_Icon_-_Motor.png/24px-Item_Icon_-_Motor.png?5026b0"
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Hide Game Mechanics",
+       "qty": null,
+       "icon": null
+      }
+     ]
+    },
+    {
+     "cost": [
+      {
+       "name": "Player",
+       "qty": null,
+       "icon": null
+      }
+     ],
+     "note": "Character Appearance  •  Character Creation  •  Inventory  •  Health  •  Death  •  Statuses  •  Buffs and Debuffs  •  Jobs  •  Traits  •  Skills  •  Sleep  •  Stamina  •  GATEPal"
+    },
+    {
+     "cost": [
+      {
+       "name": "World",
+       "qty": null,
+       "icon": null
+      }
+     ],
+     "note": "Assault Events ( Portal Storm)  •  Battery (Item Charge) \"Battery (Item Charge)\")  •  Check-In Terminal  •  Chemistry  •  Cooking  •  Damage Types  •  Difficulty  •  Energy  •  Mechanics  •  Pets  •  Recipes  •  Sandbox Settings  •  Trading  •  Weather Events"
+    },
+    {
+     "cost": [
+      {
+       "name": "Minigames",
+       "qty": null,
+       "icon": null
+      }
+     ],
+     "note": "Research Minigame  •  Sleeping Minigame  •  Defecation Minigame  •  Fishing Minigame"
+    },
+    {
+     "cost": [
+      {
+       "name": "Liquids",
+       "qty": null,
+       "icon": null
+      }
+     ],
+     "note": "Water  •  Tainted Water  •  Radioactive Waste  •  Molten Material  •  Antejuice  •  Ink  •  Feces"
+    }
+   ]
+  }
+ ]
+}

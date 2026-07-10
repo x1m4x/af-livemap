@@ -48,6 +48,8 @@ const state = {
   elevatorRec: null,       // null | {samples: [{x, y, z, t}]} — идёт запись лифта
   carts: [],               // [{id, name, world, path: [[x,y,z]...]}] — тележки/рельсы
   cartRec: null,           // null | {samples: [{x, y, z, t}]} — идёт запись тележки
+  traders: [],             // [{id, key, name, world, x, y, z}] — найденные торговцы
+  traderCatalog: null,     // справочник обменов из web/traders-catalog.json
   portals: [],             // [{id, name, count, from:{world,x,y,z}, to:{world,x,y,z}}]
   portalIgnore: [],        // зоны «не портал»: [{id, name, world, x, y, z, radius}]
   prevLocal: null,         // прошлая позиция игрока — для автодетекта порталов
@@ -133,6 +135,7 @@ function switchViewedWorld(world) {
   loadElevators();
   loadPortals();
   loadCarts();
+  loadTraders();
 }
 
 // ==================== Скан ====================
@@ -442,6 +445,19 @@ function renderWaypointList() {
     ], `wp:${wp.id}`);
   }
 
+  for (const tr of state.traders) {
+    makeRow(list,
+      t("trader_label", { name: tr.name }),
+      tr,
+      [
+        makeRenameButton("/api/traders", tr.id, tr.name, loadTraders),
+        makeRouteButton(tr.id, tr.name, tr.world, tr.x, tr.y, tr.z),
+        makeButton("×", () => {
+          if (confirm(t("confirm_delete_trader", { name: tr.name }))) deleteTrader(tr.id);
+        }, t("delete_btn")),
+      ], `trader:${tr.id}`);
+  }
+
   for (const elevator of state.elevators) {
     makeRow(list,
       t("elevator_label", { name: elevator.name, n: elevator.stops.length,
@@ -603,6 +619,10 @@ function hitTestMap(sx, sy) {
     const p = worldScreen(wp.x, wp.y);
     consider(Math.hypot(sx - p.x, sy - p.y), "wp", wp.id);
   }
+  for (const tr of state.traders) {
+    const p = worldScreen(tr.x, tr.y);
+    consider(Math.hypot(sx - p.x, sy - p.y), "trader", tr.id);
+  }
   for (const elevator of state.elevators) {
     const p = worldScreen(elevator.x, elevator.y);
     consider(Math.hypot(sx - p.x, sy - p.y), "elevator", elevator.id);
@@ -683,6 +703,10 @@ function elementEndpoints(type, id) {
   if (type === "wp") {
     const w = state.waypoints.find(x => x.id === id);
     return w ? [{ world: w.world, x: w.x, y: w.y, z: w.z }] : [];
+  }
+  if (type === "trader") {
+    const tr = state.traders.find(x => x.id === id);
+    return tr ? [{ world: tr.world, x: tr.x, y: tr.y, z: tr.z }] : [];
   }
   if (type === "zone") {
     const z = state.portalIgnore.find(x => x.id === id);
@@ -816,6 +840,148 @@ async function finishCartRecording() {
   } else {
     alert(t("save_failed") + (await resp.text()));
   }
+}
+
+// ==================== Торговцы ====================
+// Позиция запоминается тобой (значит, ты его нашёл и поговорил), а список
+// обменов и иконки берутся из справочника traders-catalog.json (данные вики).
+
+async function loadTraderCatalog() {
+  try {
+    const resp = await fetch("/traders-catalog.json");
+    state.traderCatalog = await resp.json();
+  } catch (err) { state.traderCatalog = { traders: [] }; }
+}
+
+function catalogEntry(key) {
+  if (!state.traderCatalog) return null;
+  return state.traderCatalog.traders.find(t => t.key === key) || null;
+}
+
+async function loadTraders() {
+  try {
+    const world = state.viewedWorld;
+    const resp = await fetch(`/api/traders${world ? "?world=" + encodeURIComponent(world) : ""}`);
+    state.traders = (await resp.json()).traders || [];
+    renderWaypointList();
+  } catch (err) { /* server unavailable */ }
+}
+
+async function addTrader(key, name, x, y, z) {
+  const resp = await fetch("/api/traders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "add", key, name, world: state.world, x, y, z }),
+  });
+  if (resp.ok) await loadTraders();
+}
+
+async function deleteTrader(id) {
+  if (state.selected.type === "trader" && state.selected.id === id) clearMapSelection();
+  await fetch("/api/traders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "delete", id }),
+  });
+  await loadTraders();
+}
+
+// Тултип: что торговец даёт и что просит взамен
+function buildTraderTooltip(trader) {
+  const box = document.getElementById("traderTooltip");
+  box.innerHTML = "";
+  const entry = catalogEntry(trader.key);
+
+  const title = document.createElement("h4");
+  title.textContent = trader.name;
+  box.appendChild(title);
+
+  if (entry && entry.location) {
+    const loc = document.createElement("div");
+    loc.className = "tt-loc";
+    loc.textContent = entry.location + (entry.kind ? ` · ${entry.kind}` : "");
+    box.appendChild(loc);
+  }
+
+  if (!entry || !entry.trades.length) {
+    const none = document.createElement("div");
+    none.textContent = t("trader_sells_nothing");
+    box.appendChild(none);
+    return;
+  }
+
+  const side = (items) => {
+    const wrap = document.createElement("span");
+    wrap.className = "tt-side";
+    for (const it of items || []) {
+      if (it.icon) {
+        const img = document.createElement("img");
+        img.src = it.icon;
+        img.alt = it.name;
+        img.loading = "lazy";
+        wrap.appendChild(img);
+      }
+      const label = document.createElement("span");
+      label.textContent = (it.qty ? it.qty + "× " : "") + it.name;
+      wrap.appendChild(label);
+    }
+    return wrap;
+  };
+
+  for (const trade of entry.trades) {
+    const row = document.createElement("div");
+    row.className = "tt-row";
+    row.appendChild(side(trade.cost));           // что отдаёшь
+    const arrow = document.createElement("span");
+    arrow.className = "tt-arrow";
+    arrow.textContent = "→";
+    row.appendChild(arrow);
+    row.appendChild(side(trade.buy));            // что получаешь
+    box.appendChild(row);
+
+    if (trade.note || trade.unlocked) {
+      const sub = document.createElement("div");
+      sub.className = "tt-unlock";
+      sub.textContent = trade.note || t("trader_unlock", { text: trade.unlocked });
+      box.appendChild(sub);
+    }
+  }
+}
+
+function showTraderTooltip(trader, sx, sy) {
+  const box = document.getElementById("traderTooltip");
+  if (box.dataset.traderId !== trader.id) {
+    box.dataset.traderId = trader.id;
+    buildTraderTooltip(trader);
+  }
+  box.classList.remove("hidden");
+  // Держим тултип в пределах окна
+  const w = box.offsetWidth, h = box.offsetHeight;
+  let x = sx + 16, y = sy + 16;
+  if (x + w > window.innerWidth - 8) x = sx - w - 16;
+  if (y + h > window.innerHeight - 8) y = Math.max(8, window.innerHeight - h - 8);
+  box.style.left = x + "px";
+  box.style.top = y + "px";
+}
+
+function hideTraderTooltip() {
+  const box = document.getElementById("traderTooltip");
+  box.classList.add("hidden");
+  box.dataset.traderId = "";
+}
+
+// Торговец под курсором (по маркеру или по подписи)
+function traderAt(sx, sy) {
+  for (const b of labelHitboxes) {
+    if (b.type === "trader" && sx >= b.x0 && sx <= b.x1 && sy >= b.y0 && sy <= b.y1) {
+      return state.traders.find(x => x.id === b.id) || null;
+    }
+  }
+  for (const tr of state.traders) {
+    const p = worldScreen(tr.x, tr.y);
+    if (Math.hypot(sx - p.x, sy - p.y) <= 14) return tr;
+  }
+  return null;
 }
 
 // ==================== Порталы ====================
@@ -1560,6 +1726,29 @@ function draw() {
     ctx.textAlign = "left";
   }
 
+  // Торговцы: жёлтая монета + подпись (наведи — покажет, чем торгует)
+  for (const tr of state.traders) {
+    const point = worldToImage(t, tr.x, tr.y);
+    const pos = imageToScreen(point.x, point.y);
+    ctx.fillStyle = "#facc15";
+    ctx.strokeStyle = "#0d1117";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#0d1117";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("$", pos.x, pos.y + 3.5);
+    ctx.fillStyle = "#fde68a";
+    ctx.font = "12px sans-serif";
+    const trLabel = t("trader_label", { name: tr.name });
+    ctx.fillText(trLabel, pos.x, pos.y - 12);
+    recordLabelBox(trLabel, pos.x, pos.y - 12, "trader", tr.id);
+    ctx.textAlign = "left";
+  }
+
   // Игроки
   if (viewing) {
     for (const player of state.players) {
@@ -1676,6 +1865,7 @@ function drawSelectionOverlay() {
     // Точка / лифт / зона — кольцо вокруг маркера
     const lists = {
       wp: state.waypoints, elevator: state.elevators, zone: state.portalIgnore,
+      trader: state.traders,
     };
     const item = (lists[sel.type] || []).find(e => e.id === sel.id);
     if (!item) return;
@@ -1889,6 +2079,50 @@ document.getElementById("waypointsBtn").addEventListener("click", () => {
   document.getElementById("waypointPanel").classList.toggle("hidden");
 });
 
+// ---- «+ Торговец»: сохраняет того, рядом с кем ты стоишь ----
+document.getElementById("addTraderBtn").addEventListener("click", () => {
+  const local = state.players.find(p => p.isLocal) || state.players[0];
+  if (!local || !state.world || state.world === "MainMenu") {
+    alert(t("no_player_data"));
+    return;
+  }
+  const select = document.getElementById("traderPickSelect");
+  select.innerHTML = "";
+  const catalog = (state.traderCatalog && state.traderCatalog.traders) || [];
+  for (const entry of catalog) {
+    const option = document.createElement("option");
+    option.value = entry.key;
+    option.textContent = entry.location ? `${entry.name} — ${entry.location}` : entry.name;
+    select.appendChild(option);
+  }
+  document.getElementById("traderPickPopup").classList.remove("hidden");
+});
+
+document.getElementById("traderPickCancel").addEventListener("click", () => {
+  document.getElementById("traderPickPopup").classList.add("hidden");
+});
+
+document.getElementById("traderPickAdd").addEventListener("click", async () => {
+  const local = state.players.find(p => p.isLocal) || state.players[0];
+  if (!local) return;
+  const key = document.getElementById("traderPickSelect").value;
+  const entry = catalogEntry(key);
+  document.getElementById("traderPickPopup").classList.add("hidden");
+  if (state.viewedWorld !== state.world) switchViewedWorld(state.world);
+  await addTrader(key, entry ? entry.name : key, local.x, local.y, local.z);
+  positionWaypointPanel();
+  document.getElementById("waypointPanel").classList.remove("hidden");
+});
+
+// ---- Наведение на торговца — тултип с его обменами ----
+canvas.addEventListener("mousemove", (e) => {
+  if (state.view3d) return;
+  const tr = traderAt(e.offsetX, e.offsetY);
+  if (tr) showTraderTooltip(tr, e.clientX, e.clientY);
+  else hideTraderTooltip();
+});
+canvas.addEventListener("mouseleave", hideTraderTooltip);
+
 document.getElementById("noPortalBtn").addEventListener("click", async () => {
   const local = state.players.find(p => p.isLocal) || state.players[0];
   if (!local || !state.world || state.world === "MainMenu") {
@@ -2044,6 +2278,7 @@ document.getElementById("imagesClose").addEventListener("click", () => {
 // ==================== Startup ====================
 
 I18N.applyStatic();
+loadTraderCatalog().then(loadTraders);
 loadWorlds();
 connectStream();
 pollScan();
