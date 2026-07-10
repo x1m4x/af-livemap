@@ -569,8 +569,30 @@ function distToSegment(px, py, ax, ay, bx, by) {
   return Math.hypot(px - (ax + dx * tt), py - (ay + dy * tt));
 }
 
+// Кликабельные прямоугольники подписей на карте. Заполняются при отрисовке
+// (см. recordLabelBox), поэтому зона клика точно совпадает с тем, что видно.
+let labelHitboxes = [];
+
+// Вызывать сразу после ctx.fillText для подписи (шрифт уже выставлен).
+// cx — центр текста, cy — базовая линия (как в fillText при textAlign=center).
+function recordLabelBox(text, cx, cy, type, id) {
+  const w = ctx.measureText(text).width;
+  labelHitboxes.push({
+    type, id,
+    x0: cx - w / 2 - 3, x1: cx + w / 2 + 3,
+    y0: cy - 12, y1: cy + 4,
+  });
+}
+
 // Что находится под кликом (в px экрана). Возвращает {type, id} или null.
 function hitTestMap(sx, sy) {
+  // Подписи проверяем первыми: если кликнули по названию — берём его
+  for (const b of labelHitboxes) {
+    if (sx >= b.x0 && sx <= b.x1 && sy >= b.y0 && sy <= b.y1) {
+      return { type: b.type, id: b.id };
+    }
+  }
+
   const HIT = 14; // радиус попадания, px
   let best = null, bestDist = HIT;
   const consider = (dist, type, id) => {
@@ -1342,6 +1364,7 @@ resize();
 function draw() {
   ctx.fillStyle = "#0d1117";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  labelHitboxes = []; // пересобираем зоны клика по подписям каждый кадр
 
   const t = currentTransform();
   const viewing = state.viewedWorld === state.world;
@@ -1409,7 +1432,10 @@ function draw() {
     ctx.textAlign = "center";
     ctx.fillText("⬍", pos.x, pos.y + 4);
     ctx.font = "12px sans-serif";
-    ctx.fillText(t("elevator_map_label", { name: elevator.name, n: elevator.stops.length }), pos.x, pos.y - Math.max(6, radius) - 4);
+    const elevLabel = t("elevator_map_label", { name: elevator.name, n: elevator.stops.length });
+    const elevLabelY = pos.y - Math.max(6, radius) - 4;
+    ctx.fillText(elevLabel, pos.x, elevLabelY);
+    recordLabelBox(elevLabel, pos.x, elevLabelY, "elevator", elevator.id);
     ctx.textAlign = "left";
   }
 
@@ -1442,7 +1468,9 @@ function draw() {
     ctx.fillStyle = "#86efac";
     ctx.font = "12px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(`⛟ ${cart.name}`, midPos.x, midPos.y - 8);
+    const cartLabel = `⛟ ${cart.name}`;
+    ctx.fillText(cartLabel, midPos.x, midPos.y - 8);
+    recordLabelBox(cartLabel, midPos.x, midPos.y - 8, "cart", cart.id);
     ctx.textAlign = "left";
   }
 
@@ -1461,7 +1489,9 @@ function draw() {
     ctx.fillStyle = "#8b949e";
     ctx.font = "12px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(`🚫 ${zone.name}`, pos.x, pos.y - radius - 4);
+    const zoneLabel = `🚫 ${zone.name}`;
+    ctx.fillText(zoneLabel, pos.x, pos.y - radius - 4);
+    recordLabelBox(zoneLabel, pos.x, pos.y - radius - 4, "zone", zone.id);
     ctx.textAlign = "left";
   }
 
@@ -1485,6 +1515,7 @@ function draw() {
       ctx.font = "12px sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(label, pos.x, pos.y - 12);
+      recordLabelBox(label, pos.x, pos.y - 12, "portal", portal.id);
       ctx.textAlign = "left";
       return pos;
     };
@@ -1525,6 +1556,7 @@ function draw() {
     ctx.font = "12px sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(wp.name, pos.x, pos.y - 12);
+    recordLabelBox(wp.name, pos.x, pos.y - 12, "wp", wp.id);
     ctx.textAlign = "left";
   }
 
