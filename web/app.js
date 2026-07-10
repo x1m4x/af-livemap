@@ -1588,7 +1588,7 @@ function connectStream() {
     if (local && view3dReady) View3D.setPlayerPos(local.x, local.y, local.z);
     if (state.view3d && view3dReady) {
       View3D.setPlayers(viewing ? state.players : []);
-      if (state.scan.dirty3d) rebuildCloud();
+      maybeRebuildCloud();
       if (state.follow && local && viewing) View3D.centerOn(local.x, local.y, local.z);
     }
     recalcRoute();
@@ -1599,7 +1599,7 @@ function connectStream() {
       if (state.scan.refZ === null || Math.abs(local.z - state.scan.refZ) > 150) {
         state.scan.refZ = local.z;
         state.scan.dirty = true;
-        if (state.floor3d) state.scan.dirty3d = true; // сменился этаж — облако тоже
+        // 3D пересобирать не нужно: этаж игрока шейдер читает из uPlayerPos
       }
       if (!state.centered) {
         const point = worldToImage(currentTransform(), local.x, local.y);
@@ -2114,23 +2114,23 @@ const canvas3d = document.getElementById("map3d");
 let view3dReady = false;
 let view3dCentered = false;
 
+let lastCloudBuild = 0;
+
+// Полное облако уходит в GPU-буфер; фильтр «этаж/вся карта» и туман считает
+// шейдер — переключение этажа и движение игрока не требуют пересборки.
 function rebuildCloud() {
   if (!view3dReady) return;
-  // Режим «этаж»: только вокселя в ±5 м от высоты игрока — иначе при
-  // миллионах точек 3D превращается в нечитаемую кашу
-  const refZ = (state.world === state.viewedWorld) ? state.scan.refZ : null;
-  const filter = state.floor3d && refZ !== null;
-  const zLo = filter ? Math.floor((refZ - 500) / SCAN_CELL) : -Infinity;
-  const zHi = filter ? Math.ceil((refZ + 500) / SCAN_CELL) : Infinity;
-  const cells = [];
-  for (const col of state.scan.columns.values()) {
-    for (const gz of col.zs.keys()) {
-      if (gz < zLo || gz > zHi) continue;
-      cells.push({ gx: col.gx, gy: col.gy, gz });
-    }
-  }
-  View3D.setCloud(cells);
+  View3D.setCloudFromColumns(state.scan.columns, SCAN_CELL);
   state.scan.dirty3d = false;
+  lastCloudBuild = performance.now();
+}
+
+// Пересборка буфера на 1.7 млн точек — сотни мс: во время активного скана
+// обновляем облако не чаще раза в 20 с
+function maybeRebuildCloud() {
+  if (!state.scan.dirty3d) return;
+  if (lastCloudBuild && performance.now() - lastCloudBuild < 20000) return;
+  rebuildCloud();
 }
 
 const floor3dBtn = document.getElementById("floor3dBtn");
@@ -2144,9 +2144,8 @@ updateFloor3dBtn();
 
 floor3dBtn.addEventListener("click", () => {
   state.floor3d = !state.floor3d;
-  state.scan.dirty3d = true;
   updateFloor3dBtn();
-  if (state.view3d) rebuildCloud();
+  if (view3dReady) View3D.setFloorFocus(state.floor3d); // мгновенно, шейдер
 });
 
 document.getElementById("view3dBtn").addEventListener("click", () => {
@@ -2161,6 +2160,7 @@ document.getElementById("view3dBtn").addEventListener("click", () => {
       alert(t("webgl_unavailable"));
       return;
     }
+    View3D.setFloorFocus(state.floor3d);
   }
   state.view3d = !state.view3d;
   canvas3d.classList.toggle("hidden", !state.view3d);

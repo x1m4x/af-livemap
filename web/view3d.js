@@ -5,6 +5,9 @@
 "use strict";
 
 const View3D = (() => {
+  // Фон сцены — участвует в тумане и «призрачности» этажей
+  const BG = [0.05, 0.07, 0.09];
+
   const VERTEX_SHADER = `
     attribute vec3 aPos;
     attribute vec3 aColor;
@@ -13,10 +16,16 @@ const View3D = (() => {
     uniform float uMaxSize;
     uniform vec3 uPlayerPos;
     uniform float uUseDistance;
+    uniform float uFloorFocus;  // 1 = подсветить этаж игрока, остальное призраком
+    uniform float uFogFar;      // м: дальше этого — полный туман
+    uniform float uGhostPass;   // -1 = все точки, 0 = только яркие, 1 = только призраки
     varying vec3 vColor;
+    varying float vDepth;       // линейная глубина 0..1 — для EDL-подсветки
+    varying float vDrop;        // 1 = точка не этого прохода, выбросить
     void main() {
       gl_Position = uMvp * vec4(aPos, 1.0);
-      float size = uPointScale / max(gl_Position.w, 0.1);
+      float w = max(gl_Position.w, 0.1);
+      float size = uPointScale / w;
       gl_PointSize = clamp(size, 1.0, uMaxSize);
       // Цвет по расстоянию от игрока: тёплое близко -> зелёное -> синее далеко.
       // Считается в шейдере, поэтому перекрашивается на лету при движении.
@@ -26,18 +35,70 @@ const View3D = (() => {
       vec3 cMid  = vec3(0.45, 0.85, 0.5);
       vec3 cFar  = vec3(0.4, 0.5, 1.0);
       vec3 distColor = t < 0.5 ? mix(cNear, cMid, t * 2.0) : mix(cMid, cFar, t * 2.0 - 1.0);
-      vColor = mix(aColor, distColor, uUseDistance);
+      vec3 color = mix(aColor, distColor, uUseDistance);
+      // Режим этажа: вне ±5 м от высоты игрока точки почти сливаются с фоном,
+      // но остаются видимым контекстом здания (не скрываются совсем)
+      float ghost = uFloorFocus * smoothstep(5.0, 8.0, abs(aPos.z - uPlayerPos.z));
+      // Туман: дальнее тонет в фоне — у сцены появляется глубина
+      float fog = smoothstep(uFogFar * 0.35, uFogFar, w);
+      vColor = mix(color, vec3(${BG[0]}, ${BG[1]}, ${BG[2]}), max(ghost * 0.88, fog * 0.85));
+      vDepth = clamp(w / 300.0, 0.0, 1.0);
+      // Два прохода (яркие пишут глубину, призраки нет): не наш — выбрасываем
+      float g = step(0.5, ghost);
+      vDrop = uGhostPass < -0.5 ? 0.0 : abs(g - uGhostPass);
     }
   `;
 
   const FRAGMENT_SHADER = `
     precision mediump float;
+    uniform float uIsLine;
     varying vec3 vColor;
+    varying float vDepth;
+    varying float vDrop;
     void main() {
+      if (vDrop > 0.5) discard;
       // Круглые точки: отбрасываем углы квадратного спрайта
-      vec2 fromCenter = gl_PointCoord - vec2(0.5);
-      if (dot(fromCenter, fromCenter) > 0.25) discard;
-      gl_FragColor = vec4(vColor, 1.0);
+      // (для линий gl_PointCoord не определён — не трогаем)
+      if (uIsLine < 0.5) {
+        vec2 fromCenter = gl_PointCoord - vec2(0.5);
+        if (dot(fromCenter, fromCenter) > 0.25) discard;
+      }
+      // Глубина уходит в альфу оффскрин-текстуры — её читает EDL-проход
+      gl_FragColor = vec4(vColor, vDepth);
+    }
+  `;
+
+  // EDL (Eye-Dome Lighting): затемняем пиксель, если соседи ближе к камере, —
+  // у облака появляются контуры и рельеф, как в Potree/CloudCompare
+  const EDL_VERTEX = `
+    attribute vec2 aQuad;
+    varying vec2 vUv;
+    void main() {
+      vUv = aQuad * 0.5 + 0.5;
+      gl_Position = vec4(aQuad, 0.0, 1.0);
+    }
+  `;
+
+  const EDL_FRAGMENT = `
+    precision mediump float;
+    uniform sampler2D uTex;
+    uniform vec2 uInvSize;
+    uniform float uStrength;
+    varying vec2 vUv;
+    void main() {
+      vec4 c = texture2D(uTex, vUv);
+      float zc = c.a;
+      float resp = 0.0;
+      resp += max(0.0, zc - texture2D(uTex, vUv + vec2(uInvSize.x, 0.0)).a);
+      resp += max(0.0, zc - texture2D(uTex, vUv - vec2(uInvSize.x, 0.0)).a);
+      resp += max(0.0, zc - texture2D(uTex, vUv + vec2(0.0, uInvSize.y)).a);
+      resp += max(0.0, zc - texture2D(uTex, vUv - vec2(0.0, uInvSize.y)).a);
+      resp += max(0.0, zc - texture2D(uTex, vUv + uInvSize).a) * 0.7;
+      resp += max(0.0, zc - texture2D(uTex, vUv - uInvSize).a) * 0.7;
+      resp += max(0.0, zc - texture2D(uTex, vUv + vec2(uInvSize.x, -uInvSize.y)).a) * 0.7;
+      resp += max(0.0, zc - texture2D(uTex, vUv + vec2(-uInvSize.x, uInvSize.y)).a) * 0.7;
+      float shade = exp(-resp * uStrength);
+      gl_FragColor = vec4(c.rgb * shade, 1.0);
     }
   `;
 
@@ -46,6 +107,18 @@ const View3D = (() => {
   let program = null;
   let attribs = {};
   let uniforms = {};
+
+  // EDL: оффскрин-текстура сцены + фуллскрин-проход подсветки контуров
+  let edlProgram = null;
+  let edlUniforms = {};
+  let edlQuadBuffer = null;
+  let fbo = null;
+  let fboTexture = null;
+  let fboDepth = null;
+  let fboWidth = 0, fboHeight = 0;
+  let edlOk = false;         // фолбэк: если FBO не собрался — рендер напрямую
+
+  let floorFocus = true;     // режим «этаж ярко, остальное призраком»
 
   let cloudBuffer = null;   // interleaved: x,y,z, r,g,b
   let cloudCount = 0;
@@ -181,6 +254,10 @@ const View3D = (() => {
     uniforms.maxSize = gl.getUniformLocation(program, "uMaxSize");
     uniforms.playerPos = gl.getUniformLocation(program, "uPlayerPos");
     uniforms.useDistance = gl.getUniformLocation(program, "uUseDistance");
+    uniforms.floorFocus = gl.getUniformLocation(program, "uFloorFocus");
+    uniforms.fogFar = gl.getUniformLocation(program, "uFogFar");
+    uniforms.ghostPass = gl.getUniformLocation(program, "uGhostPass");
+    uniforms.isLine = gl.getUniformLocation(program, "uIsLine");
 
     cloudBuffer = gl.createBuffer();
     playerBuffer = gl.createBuffer();
@@ -188,10 +265,61 @@ const View3D = (() => {
     routeBuffer = gl.createBuffer();
     selectionBuffer = gl.createBuffer();
 
+    // EDL-программа + фуллскрин-квад
+    try {
+      edlProgram = gl.createProgram();
+      gl.attachShader(edlProgram, compileShader(gl.VERTEX_SHADER, EDL_VERTEX));
+      gl.attachShader(edlProgram, compileShader(gl.FRAGMENT_SHADER, EDL_FRAGMENT));
+      gl.linkProgram(edlProgram);
+      if (!gl.getProgramParameter(edlProgram, gl.LINK_STATUS)) {
+        throw new Error(gl.getProgramInfoLog(edlProgram));
+      }
+      edlUniforms.tex = gl.getUniformLocation(edlProgram, "uTex");
+      edlUniforms.invSize = gl.getUniformLocation(edlProgram, "uInvSize");
+      edlUniforms.strength = gl.getUniformLocation(edlProgram, "uStrength");
+      edlUniforms.quad = gl.getAttribLocation(edlProgram, "aQuad");
+      edlQuadBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, edlQuadBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW); // один треугольник на весь экран
+      edlOk = true;
+    } catch (err) {
+      edlOk = false; // без EDL, но с туманом и этажами
+    }
+
     gl.enable(gl.DEPTH_TEST);
-    gl.clearColor(0.05, 0.07, 0.09, 1.0);
+    gl.clearColor(BG[0], BG[1], BG[2], 1.0);
 
     bindInput();
+    return true;
+  }
+
+  // (Пере)создать оффскрин-буфер под размер канваса. Альфа текстуры хранит
+  // линейную глубину для EDL, фон очищается альфой 1 (максимально далеко).
+  function ensureFbo(width, height) {
+    if (!edlOk) return false;
+    if (fbo && fboWidth === width && fboHeight === height) return true;
+    if (!fbo) {
+      fbo = gl.createFramebuffer();
+      fboTexture = gl.createTexture();
+      fboDepth = gl.createRenderbuffer();
+    }
+    gl.bindTexture(gl.TEXTURE_2D, fboTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, fboDepth);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fboTexture, 0);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, fboDepth);
+    const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (!complete) { edlOk = false; return false; }
+    fboWidth = width;
+    fboHeight = height;
     return true;
   }
 
@@ -234,6 +362,41 @@ const View3D = (() => {
       data[offset++] = r;
       data[offset++] = g;
       data[offset++] = b;
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, cloudBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    cloudCount = count;
+  }
+
+  // Облако прямо из чанкового хранилища app.js (columns: "gx:gy" -> {gx,gy,zs}),
+  // без промежуточного массива из миллионов объектов — на 1.7 млн точек это
+  // экономит около секунды главного потока при каждой пересборке.
+  function setCloudFromColumns(columns, cellCm) {
+    let count = 0;
+    let minGz = Infinity, maxGz = -Infinity;
+    for (const col of columns.values()) {
+      for (const gz of col.zs.keys()) {
+        if (gz < minGz) minGz = gz;
+        if (gz > maxGz) maxGz = gz;
+        count++;
+      }
+    }
+    const data = new Float32Array(count * 6);
+    const zSpan = Math.max(1, maxGz - minGz);
+    let offset = 0;
+    const k = cellCm / 100; // ячейки → метры GL
+    for (const col of columns.values()) {
+      const px = col.gx * k;
+      const py = -col.gy * k; // UE левосторонняя, как в toGL
+      for (const gz of col.zs.keys()) {
+        data[offset++] = px;
+        data[offset++] = py;
+        data[offset++] = gz * k;
+        const [r, g, b] = heightColor((gz - minGz) / zSpan);
+        data[offset++] = r;
+        data[offset++] = g;
+        data[offset++] = b;
+      }
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, cloudBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
@@ -315,8 +478,9 @@ const View3D = (() => {
     playerCount = players.length;
   }
 
-  function drawBuffer(buffer, count, pointScale, maxSize, useDistance) {
+  function drawBuffer(buffer, count, pointScale, maxSize, useDistance, opts) {
     if (count === 0) return;
+    const o = opts || {};
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.enableVertexAttribArray(attribs.pos);
     gl.enableVertexAttribArray(attribs.color);
@@ -325,7 +489,10 @@ const View3D = (() => {
     gl.uniform1f(uniforms.pointScale, pointScale);
     gl.uniform1f(uniforms.maxSize, maxSize);
     gl.uniform1f(uniforms.useDistance, useDistance);
-    gl.drawArrays(gl.POINTS, 0, count);
+    gl.uniform1f(uniforms.floorFocus, o.floorFocus || 0.0);
+    gl.uniform1f(uniforms.ghostPass, o.ghostPass !== undefined ? o.ghostPass : -1.0);
+    gl.uniform1f(uniforms.isLine, o.isLine ? 1.0 : 0.0);
+    gl.drawArrays(o.isLine ? gl.LINE_STRIP : gl.POINTS, 0, count);
   }
 
   function render() {
@@ -338,24 +505,69 @@ const View3D = (() => {
     if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
       canvas.width = canvas.clientWidth;
       canvas.height = canvas.clientHeight;
-      gl.viewport(0, 0, canvas.width, canvas.height);
     }
+
+    // Сцена рисуется в оффскрин-текстуру (глубина в альфе), затем EDL-проход
+    // кладёт её на экран с подсветкой контуров. Без FBO — напрямую.
+    const useEdl = ensureFbo(canvas.width, canvas.height);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, useEdl ? fbo : null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.useProgram(program);
+    gl.clearColor(BG[0], BG[1], BG[2], 1.0); // альфа 1 = «далеко» для EDL
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
     lastMvp = mvpMatrix();
     gl.uniformMatrix4fv(uniforms.mvp, false, lastMvp);
     gl.uniform3fv(uniforms.playerPos, playerPos || [0, 0, 0]);
-    // Без позиции игрока откатываемся на цвет из буфера (по высоте)
-    drawBuffer(cloudBuffer, cloudCount, canvas.height * 0.28, 6.0, playerPos ? 1.0 : 0.0);
+    // Туман масштабируется с зумом: вблизи — локальная структура,
+    // издалека — целые сектора
+    gl.uniform1f(uniforms.fogFar, Math.max(60, camera.dist * 3.0));
+
+    // Режим этажа активен только когда знаем высоту игрока
+    const focus = (floorFocus && playerPos) ? 1.0 : 0.0;
+    const useDist = playerPos ? 1.0 : 0.0;
+    if (focus > 0) {
+      // Призраки без записи глубины — не заслоняют яркий этаж,
+      // потом яркие поверх с обычным depth-тестом
+      gl.depthMask(false);
+      drawBuffer(cloudBuffer, cloudCount, canvas.height * 0.28, 6.0, 0.0,
+                 { floorFocus: 1.0, ghostPass: 1.0 });
+      gl.depthMask(true);
+      drawBuffer(cloudBuffer, cloudCount, canvas.height * 0.28, 6.0, useDist,
+                 { floorFocus: 1.0, ghostPass: 0.0 });
+    } else {
+      // Без позиции игрока откатываемся на цвет из буфера (по высоте)
+      drawBuffer(cloudBuffer, cloudCount, canvas.height * 0.28, 6.0, useDist);
+    }
     if (routeCount > 0) {
       drawBuffer(routeBuffer, routeCount, canvas.height * 1.2, 5.0, 0.0);
-      gl.drawArrays(gl.LINE_STRIP, 0, routeCount);
+      drawBuffer(routeBuffer, routeCount, canvas.height * 1.2, 5.0, 0.0, { isLine: true });
     }
     if (selectionCount > 0) {
       drawBuffer(selectionBuffer, selectionCount, canvas.height * 2.0, 10.0, 0.0);
-      gl.drawArrays(gl.LINE_STRIP, 0, selectionCount);
+      drawBuffer(selectionBuffer, selectionCount, canvas.height * 2.0, 10.0, 0.0, { isLine: true });
     }
     drawBuffer(waypointBuffer, waypoints.length, canvas.height * 4.0, 16.0, 0.0);
     drawBuffer(playerBuffer, playerCount, canvas.height * 3.0, 14.0, 0.0);
+
+    if (useEdl) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.disable(gl.DEPTH_TEST);
+      gl.useProgram(edlProgram);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, fboTexture);
+      gl.uniform1i(edlUniforms.tex, 0);
+      gl.uniform2f(edlUniforms.invSize, 1 / canvas.width, 1 / canvas.height);
+      gl.uniform1f(edlUniforms.strength, 14.0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, edlQuadBuffer);
+      gl.enableVertexAttribArray(edlUniforms.quad);
+      gl.vertexAttribPointer(edlUniforms.quad, 2, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.disableVertexAttribArray(edlUniforms.quad);
+      gl.enable(gl.DEPTH_TEST);
+    }
+
     drawLabels();
     rafId = requestAnimationFrame(render);
   }
@@ -488,6 +700,8 @@ const View3D = (() => {
   return {
     init,
     setCloud,
+    setCloudFromColumns,
+    setFloorFocus(on) { floorFocus = !!on; },
     setPlayers,
     setWaypoints,
     setRoute,

@@ -89,7 +89,7 @@ const I18N = (() => {
       portal_uses_title: "How many times you traveled through this portal",
       floor3d_floor: "Floor ±5 m",
       floor3d_all: "Whole map",
-      floor3d_title: "3D cloud: show only the current floor or the whole scanned map",
+      floor3d_title: "3D: highlight your floor (rest ghosted) or show everything equally",
       new_portal_console: "New portal detected:",
       confirm_delete_portal: "Delete \"{name}\"? (false hits — e.g. after death — delete freely)",
 
@@ -213,7 +213,7 @@ const I18N = (() => {
       portal_uses_title: "Сколько раз ты прошёл через этот портал",
       floor3d_floor: "Этаж ±5 м",
       floor3d_all: "Вся карта",
-      floor3d_title: "Облако в 3D: только текущий этаж или вся отсканированная карта",
+      floor3d_title: "3D: подсветить твой этаж (остальное призраком) или всё одинаково",
       new_portal_console: "Обнаружен новый портал:",
       confirm_delete_portal: "Удалить «{name}»? (ложные срабатывания — например, после смерти — удаляй смело)",
 
