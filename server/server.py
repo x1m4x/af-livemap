@@ -40,6 +40,8 @@ CONSOLE_STRINGS = {
         "data_path": "Data: {path}",
         "portal_suppressed": "Portal suppressed: destination inside no-portal zone '{zone}'",
         "portals_migrated": "Portals cleaned up: {merged} duplicates merged, {purged} removed inside no-portal zones, {renamed} renamed (backup: portals.json.bak)",
+        "already_running": "ERROR: another AF LiveMap server (pid {pid}) is already using this data folder.\nRunning two servers corrupts the saved scan. Close the other one and start again.",
+        "load_refused": "ERROR: {path} exists ({size} MB) but could not be read after several attempts.\nRefusing to start with an empty scan — that would overwrite your map.\nCheck the file (or restore {path}.bak) and start again.",
     },
     "ru": {
         "scan_loaded": "Скан загружен: {total} ячеек, миров: {worlds}",
@@ -55,6 +57,8 @@ CONSOLE_STRINGS = {
         "data_path": "Данные: {path}",
         "portal_suppressed": "Портал подавлен: выход внутри зоны «не портал» '{zone}'",
         "portals_migrated": "Порталы почищены: слито дублей {merged}, удалено в зонах {purged}, переименовано {renamed} (бэкап: portals.json.bak)",
+        "already_running": "ОШИБКА: другой сервер AF LiveMap (pid {pid}) уже работает с этой папкой данных.\nДва сервера одновременно портят сохранённый скан. Закрой второй и запусти заново.",
+        "load_refused": "ОШИБКА: {path} существует ({size} МБ), но не читается после нескольких попыток.\nНе стартую с пустым сканом — это перезаписало бы твою карту.\nПроверь файл (или восстанови {path}.bak) и запусти заново.",
     },
 }
 
@@ -81,6 +85,89 @@ def sc(key, **params):
     table = CONSOLE_STRINGS.get(console_lang) or CONSOLE_STRINGS["en"]
     template = table.get(key) or CONSOLE_STRINGS["en"].get(key) or key
     return template.format(**params) if params else template
+
+
+def write_json_atomic(path: str, obj, **dump_kwargs):
+    """Записать JSON через временный файл + атомарную замену.
+
+    Имя tmp содержит pid: если два процесса всё же пишут одновременно,
+    они не перемешают байты в одном временном файле."""
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, **dump_kwargs)
+    os.replace(tmp, path)
+
+
+def read_json_guarded(path: str):
+    """Прочитать JSON-персист. None — файла нет (нормальный первый запуск).
+
+    Если файл существенный (>1 МБ), но не читается — несколько повторов,
+    затем отказ стартовать: сервер с пустым стором перезапишет накопленную
+    карту при первом же сохранении."""
+    if not os.path.exists(path):
+        return None
+    last_error = None
+    for _ in range(3):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            last_error = e
+            time.sleep(1.0)
+    try:
+        size_mb = os.path.getsize(path) / 1e6
+    except OSError:
+        size_mb = 0.0
+    if size_mb > 1.0:
+        print(sc("load_refused", path=path, size=f"{size_mb:.0f}"))
+        sys.exit(1)
+    del last_error
+    return None  # маленький/битый файл — не страшно начать заново
+
+
+def _pid_alive(pid: int) -> bool:
+    """Жив ли процесс. os.kill(pid, 0) на Windows НЕ проверка — он убивает
+    процесс через TerminateProcess, поэтому там идём через WinAPI."""
+    if os.name == "nt":
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not handle:
+            return False
+        try:
+            code = ctypes.c_ulong()
+            if kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+                return code.value == 259  # STILL_ACTIVE
+            return True
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def acquire_instance_lock(persist_dir: str):
+    """Не дать запустить два сервера над одной папкой данных.
+
+    Два процесса перезаписывают сохранения друг друга (последний победил) —
+    так теряется накопленный скан. Лок-файл хранит pid; если процесс с этим
+    pid ещё жив — отказываемся стартовать."""
+    lock_path = os.path.join(persist_dir, "server.lock")
+    try:
+        with open(lock_path, "r", encoding="utf-8") as f:
+            old_pid = int(f.read().strip())
+        if old_pid != os.getpid() and _pid_alive(old_pid):
+            print(sc("already_running", pid=old_pid))
+            sys.exit(1)
+    except (OSError, ValueError):
+        pass  # лока нет, он битый или процесс умер — забираем себе
+    with open(lock_path, "w", encoding="utf-8") as f:
+        f.write(str(os.getpid()))
+    import atexit
+    atexit.register(lambda: os.path.exists(lock_path) and os.remove(lock_path))
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(ROOT, "..", "web")
@@ -209,8 +296,9 @@ class ScanStore:
 
     def _load(self):
         try:
-            with open(self.persist_path, "r", encoding="utf-8") as f:
-                raw = json.load(f)
+            raw = read_json_guarded(self.persist_path)
+            if raw is None:
+                return
             if isinstance(raw, dict) and "worlds" in raw:
                 stored_cell = float(raw.get("cell", self.CELL))
                 worlds_raw = raw["worlds"]
@@ -241,7 +329,7 @@ class ScanStore:
             if ratio != 1.0:
                 msg += sc("scan_requantized", old=stored_cell, new=self.CELL)
             print(msg)
-        except (OSError, json.JSONDecodeError, KeyError, IndexError, TypeError, ValueError):
+        except (KeyError, IndexError, TypeError, ValueError):
             pass
 
     def _save(self):
@@ -258,10 +346,7 @@ class ScanStore:
                 },
             }
             self._dirty = False
-        tmp = self.persist_path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(raw, f)
-        os.replace(tmp, self.persist_path)
+        write_json_atomic(self.persist_path, raw)
 
     def _carve_ray(self, cells, origin, point, protect):
         """Луч прошёл от origin до point: воксели по пути — пустота.
@@ -397,14 +482,15 @@ class WalkedStore:
 
     def _load(self):
         try:
-            with open(self.persist_path, "r", encoding="utf-8") as f:
-                raw = json.load(f)
+            raw = read_json_guarded(self.persist_path)
+            if raw is None:
+                return
             for world, cells in raw.get("worlds", {}).items():
                 self.worlds[world] = {(c[0], c[1], c[2]): 1 for c in cells}
             self.version = 1
             total = sum(len(c) for c in self.worlds.values())
             print(sc("walked_loaded", total=total))
-        except (OSError, json.JSONDecodeError, KeyError, IndexError, TypeError):
+        except (KeyError, IndexError, TypeError):
             pass
 
     def _saver(self):
@@ -421,10 +507,7 @@ class WalkedStore:
                 }
                 self._dirty = False
             try:
-                tmp = self.persist_path + ".tmp"
-                with open(tmp, "w", encoding="utf-8") as f:
-                    json.dump(raw, f)
-                os.replace(tmp, self.persist_path)
+                write_json_atomic(self.persist_path, raw)
             except OSError:
                 pass
 
@@ -489,10 +572,7 @@ def load_waypoints() -> list:
 
 
 def save_waypoints(waypoints: list):
-    tmp = waypoints_path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump({"waypoints": waypoints}, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, waypoints_path)
+    write_json_atomic(waypoints_path, {"waypoints": waypoints}, ensure_ascii=False, indent=2)
 
 
 portals_path: str = ""
@@ -509,10 +589,7 @@ def load_portals_data() -> dict:
 
 
 def save_portals_data(data: dict):
-    tmp = portals_path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, portals_path)
+    write_json_atomic(portals_path, data, ensure_ascii=False, indent=2)
 
 
 def migrate_portals():
@@ -605,10 +682,7 @@ def load_notes() -> dict:
 
 def save_notes(text: str) -> dict:
     data = {"text": text, "updated": int(time.time() * 1000)}
-    tmp = notes_path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
-    os.replace(tmp, notes_path)
+    write_json_atomic(notes_path, data, ensure_ascii=False)
     return data
 
 
@@ -621,10 +695,7 @@ def load_carts() -> list:
 
 
 def save_carts(carts: list):
-    tmp = carts_path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump({"carts": carts}, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, carts_path)
+    write_json_atomic(carts_path, {"carts": carts}, ensure_ascii=False, indent=2)
 
 
 traders_path: str = ""
@@ -640,10 +711,7 @@ def load_traders() -> list:
 
 
 def save_traders(traders: list):
-    tmp = traders_path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump({"traders": traders}, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, traders_path)
+    write_json_atomic(traders_path, {"traders": traders}, ensure_ascii=False, indent=2)
 
 
 # name -> {"key": ..., "kind": stationary|traveling|machine} from the web catalog
@@ -722,10 +790,7 @@ def load_elevators() -> list:
 
 
 def save_elevators(elevators: list):
-    tmp = elevators_path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump({"elevators": elevators}, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, elevators_path)
+    write_json_atomic(elevators_path, {"elevators": elevators}, ensure_ascii=False, indent=2)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -1200,6 +1265,7 @@ def main():
     lidar_path = os.path.join(os.path.dirname(os.path.abspath(args.data)), "lidar.json")
     persist_dir = os.path.join(ROOT, "..", "data")
     os.makedirs(persist_dir, exist_ok=True)
+    acquire_instance_lock(persist_dir)
     scan_store = ScanStore(lidar_path, os.path.join(persist_dir, "scan.json"), carve=args.carve)
 
     global waypoints_path, elevators_path, portals_path, carts_path, notes_path, traders_path
