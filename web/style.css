@@ -24,6 +24,7 @@ html, body {
 }
 
 #logo { font-weight: 700; color: #d4a017; letter-spacing: 0.5px; }
+#appVersion { font-weight: 400; font-size: 11px; color: #8b949e; letter-spacing: 0; }
 
 #topbar select, #topbar button {
   background: #21262d;

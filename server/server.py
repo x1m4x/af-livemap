@@ -22,6 +22,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 if isinstance(sys.stdout, io.TextIOWrapper) and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
+# Единственный источник версии: печатается при старте, отдаётся клиенту в
+# /api/worlds и показывается в шапке UI. Менять при каждом релизе (см. CHANGELOG.md).
+VERSION = "0.3.2"
+
 
 # ==================== Console localization (en/ru) ====================
 
@@ -917,7 +921,7 @@ class Handler(BaseHTTPRequestHandler):
             with scan_store._lock:
                 scan_worlds = set(scan_store.worlds.keys())
             worlds = sorted((scan_worlds | waypoint_worlds) - {None, "", "unknown", "MainMenu"})
-            self._send_json({"worlds": worlds})
+            self._send_json({"worlds": worlds, "appVersion": VERSION})
         elif path == "/api/waypoints":
             from urllib.parse import parse_qs, urlparse
             query = parse_qs(urlparse(self.path).query)
@@ -1336,6 +1340,7 @@ def main():
     walked_store = WalkedStore(os.path.join(persist_dir, "walked.json"))
 
     server = QuietHTTPServer((args.host, args.port), Handler)
+    print(f"AF LiveMap v{VERSION}")
     print(sc("addr_pc", port=args.port))
     if args.host == "0.0.0.0":
         import socket

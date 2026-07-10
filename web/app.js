@@ -96,7 +96,14 @@ function currentTransform() {
 async function loadWorlds() {
   try {
     const resp = await fetch("/api/worlds");
-    state.worlds = (await resp.json()).worlds || [];
+    const payload = await resp.json();
+    state.worlds = payload.worlds || [];
+    // Версия приходит с сервера (единственный источник — server.py VERSION):
+    // видно, какая сборка реально работает
+    if (payload.appVersion) {
+      const el = document.getElementById("appVersion");
+      if (el) el.textContent = "v" + payload.appVersion;
+    }
     renderWorldSelect();
     // Игра не запущена — показываем первый известный мир, чтобы карта не пустовала
     if (!state.viewedWorld && state.worlds.length > 0) {
