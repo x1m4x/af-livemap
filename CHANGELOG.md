@@ -19,6 +19,11 @@ rebuild `dist/AF-LiveMap-<version>.zip`, upload to Nexus.
 
 ## 0.3.1 — 2026-07-10
 
+- **Data safety:** per-process temp files for all saves, single-instance
+  lock on the data folder (a second server refuses to start), server refuses
+  to start with an empty store if a large persist file exists but is
+  unreadable. Fixes a real data-loss incident caused by two concurrent
+  servers overwriting each other's saves.
 - **3D readability overhaul** — the static point cloud was an unreadable mess:
   - distance fog (range scales with camera zoom);
   - "Floor ±5 m / Whole map" toggle: your floor at full brightness, other
@@ -31,7 +36,7 @@ rebuild `dist/AF-LiveMap-<version>.zip`, upload to Nexus.
   - fixed route/selection lines potentially discarded by the round-point
     fragment check.
 
-## 0.3.0 — 2026-07-10
+## 0.3.0 — 2026-07-10 (published on Nexus 2026-07-10 13:37, 81 KB build)
 
 - **2D performance with millions of voxels:** chunked scan storage (64×64
   columns), canvas rebuild touches only visible chunks, density-based LOD
@@ -44,11 +49,6 @@ rebuild `dist/AF-LiveMap-<version>.zip`, upload to Nexus.
   explains the counter ("traveled ×N").
 - **Clicks/hover:** pointer cursor and underline on hoverable map labels,
   larger click targets.
-- **Data safety:** per-process temp files for all saves, single-instance
-  lock on the data folder (a second server refuses to start), server refuses
-  to start with an empty store if a large persist file exists but is
-  unreadable. Fixes a real data-loss incident caused by two concurrent
-  servers overwriting each other's saves.
 
 ## 0.2.x — 2026-07-10
 
