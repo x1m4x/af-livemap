@@ -45,6 +45,7 @@ const state = {
     dirty3d: false,
     lastRebuild: 0,        // троттлинг ребилда при зуме/пане
     builtZoom: 0,          // зум, при котором построен канвас (для staleness)
+    lod: false,            // канвас построен в LOD-режиме (чанк-квадраты)
     refZ: null,            // опорная высота (z игрока, см) для цветов и выбора вокселя
   },
   view3d: false,
@@ -207,10 +208,12 @@ async function pollScan() {
     }
     state.scan.epoch = payload.epoch;
     if (payload.cells.length > 0) {
+      const touched = new Set(); // изменённые колонки — дорисуем без ребилда
       for (const [gx, gy, gz, count] of payload.cells) {
         scanInsert(gx, gy, gz, count);
+        touched.add(gx + ":" + gy);
       }
-      state.scan.dirty = true;
+      paintScanDelta(touched);
       state.scan.dirty3d = true;
     }
     state.scan.version = payload.version;
@@ -284,6 +287,7 @@ function rebuildScanCanvas() {
 
   const cellDrawPx = pxPerCell * scale;
   const lod = cellDrawPx < 1.1; // клетка меньше пикселя — рисуем чанками
+  state.scan.lod = lod;
 
   if (lod) {
     const sizePx = chunkPx * scale;
@@ -337,6 +341,41 @@ function rebuildScanCanvas() {
   state.scan.canvas = off;
   state.scan.origin = { x: x0, y: y0 };
   state.scan.scale = scale;
+}
+
+// Дорисовать изменённые колонки прямо на существующий канвас — без полной
+// пересборки. Раньше каждый поллинг (3 с) с новыми вокселями пересобирал весь
+// видимый регион: заметный рывок каждые 3 секунды при активном скане.
+function paintScanDelta(touchedCols) {
+  const s = state.scan;
+  if (s.dirty) return; // всё равно предстоит полная пересборка
+  if (!s.canvas || !s.view || s.lod) { s.dirty = true; return; }
+  const viewing = state.world === state.viewedWorld;
+  const refZ = (viewing && s.refZ !== null) ? s.refZ : null;
+  const pxPerCell = SCAN_CELL * WORLD_SCALE;
+  const octx = s.canvas.getContext("2d");
+  const cellPx = Math.max(1.2, pxPerCell * s.scale);
+  const half = cellPx / 2;
+  for (const colKey of touchedCols) {
+    const col = s.columns.get(colKey);
+    if (!col) continue;
+    const px = (col.gx + 0.5) * pxPerCell;
+    const py = (col.gy + 0.5) * pxPerCell;
+    if (px < s.view.x0 || px > s.view.x1 || py < s.view.y0 || py > s.view.y1) continue;
+    // Лучший воксель колонки — та же логика, что в rebuildScanCanvas
+    let bestGz = null, bestDz = Infinity;
+    for (const gz of col.zs.keys()) {
+      const dz = refZ === null ? 0 : Math.abs(gz * SCAN_CELL - refZ);
+      if (bestGz === null || dz < bestDz) { bestGz = gz; bestDz = dz; }
+    }
+    const x = (px - s.view.x0) * s.scale;
+    const y = (py - s.view.y0) * s.scale;
+    octx.clearRect(x - half, y - half, cellPx, cellPx); // альфа не копится
+    if (bestGz === null) continue; // колонка опустела (карвинг)
+    const bucket = refZ === null ? 3 : scanBucket(bestGz * SCAN_CELL - refZ);
+    octx.fillStyle = SCAN_BUCKET_COLORS[bucket];
+    octx.fillRect(x - half, y - half, cellPx, cellPx);
+  }
 }
 
 // Вьюпорт вышел за построенный регион или зум заметно изменился —

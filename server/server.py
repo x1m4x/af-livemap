@@ -253,7 +253,13 @@ class ScanStore:
         self._last_seq = None
         self._last_mtime = 0.0
         self._dirty = False
+        # Журнал изменений: (version, world, gx, gy, gz, count). Инкрементальный
+        # query отвечает из хвоста журнала за O(новых ячеек) вместо перебора
+        # всех миллионов вокселей под локом на каждый поллинг клиента.
+        self._log: list = []
+        self._log_start = 0  # журнал покрывает запросы с since >= _log_start
         self._load()
+        self._log_start = self.version
         thread = threading.Thread(target=self._watch, daemon=True)
         thread.start()
 
@@ -292,6 +298,10 @@ class ScanStore:
                 self.epoch += 1
                 self.version += 1
                 self._dirty = True
+                # Журнал ссылается на удалённые ячейки — сбрасываем; клиенты
+                # по смене epoch перезагружают скан целиком (since=0)
+                self._log.clear()
+                self._log_start = self.version
             return len(doomed)
 
     def _load(self):
@@ -336,19 +346,23 @@ class ScanStore:
         with self._lock:
             if not self._dirty:
                 return
-            raw = {
-                "cell": self.CELL,
-                "worlds": {
-                    # надгробия (count 0) на диск не пишем — они нужны только
-                    # живым клиентам для инкрементального удаления
-                    world: [[k[0], k[1], k[2], v[0]] for k, v in cells.items() if v[0] > 0]
-                    for world, cells in self.worlds.items()
-                },
-            }
             self._dirty = False
+            # Под локом — только дешёвый снапшот (list() на C-скорости, ~50 мс
+            # на 1.7 млн). Сборка JSON-структуры на секунды — уже без лока,
+            # иначе каждый query/SSE замирал на время сериализации.
+            snapshot = {world: list(cells.items()) for world, cells in self.worlds.items()}
+        raw = {
+            "cell": self.CELL,
+            "worlds": {
+                # надгробия (count 0) на диск не пишем — они нужны только
+                # живым клиентам для инкрементального удаления
+                world: [[k[0], k[1], k[2], v[0]] for k, v in items if v[0] > 0]
+                for world, items in snapshot.items()
+            },
+        }
         write_json_atomic(self.persist_path, raw)
 
-    def _carve_ray(self, cells, origin, point, protect):
+    def _carve_ray(self, cells, origin, point, protect, changed):
         """Луч прошёл от origin до point: воксели по пути — пустота.
 
         Уменьшаем их счётчик; на нуле воксель становится «надгробием» [0, version],
@@ -380,6 +394,7 @@ class ScanStore:
                     cell[0] = max(0, cell[0] - self.CARVE)
                     cell[1] = self.version
                     self._dirty = True
+                    changed.add(k)
             t += step
 
     def _ingest(self, batch: dict):
@@ -395,6 +410,7 @@ class ScanStore:
         with self._lock:
             cells = self.worlds.setdefault(world, {})
             self.version += 1
+            changed = set()
 
             # 1. Воксели, в которые попали лучи этого тика — это реальные
             #    поверхности; защищаем их от карвинга (см. _carve_ray).
@@ -410,7 +426,7 @@ class ScanStore:
             #    По умолчанию выключен — точки не удаляются вообще.
             if self.carve and origin:
                 for point in points:
-                    self._carve_ray(cells, origin, point, hit_keys)
+                    self._carve_ray(cells, origin, point, hit_keys, changed)
 
             # 3. Регистрируем попадания
             for point in points:
@@ -425,7 +441,17 @@ class ScanStore:
                     cell[1] = self.version
                 else:
                     cells[key] = [1, self.version]
+                changed.add(key)
             self._dirty = True
+
+            # Журнал для инкрементальных query
+            for k in changed:
+                cell = cells.get(k)
+                self._log.append((self.version, world, k[0], k[1], k[2],
+                                  cell[0] if cell else 0))
+            if len(self._log) > 500_000:
+                del self._log[:250_000]
+                self._log_start = self._log[0][0] if self._log else self.version
 
     def _watch(self):
         last_save = time.time()
@@ -449,12 +475,24 @@ class ScanStore:
 
     def query(self, world: str, since: int):
         with self._lock:
-            cells = self.worlds.get(world, {})
-            changed = [
-                [k[0], k[1], k[2], v[0]]
-                for k, v in cells.items()
-                if v[1] > since
-            ]
+            if since >= self._log_start:
+                # Быстрый путь: только хвост журнала, O(новых ячеек).
+                # Журнал упорядочен по version — идём с конца до since.
+                changed = []
+                for entry in reversed(self._log):
+                    if entry[0] <= since:
+                        break
+                    if entry[1] == world:
+                        changed.append([entry[2], entry[3], entry[4], entry[5]])
+                changed.reverse()
+            else:
+                # Полная выборка (первая загрузка клиента): перебор всех ячеек
+                cells = self.worlds.get(world, {})
+                changed = [
+                    [k[0], k[1], k[2], v[0]]
+                    for k, v in cells.items()
+                    if v[1] > since
+                ]
             return {"version": self.version, "epoch": self.epoch, "world": world, "cells": changed}
 
 
@@ -476,7 +514,10 @@ class WalkedStore:
         self.version = 0
         self._lock = threading.Lock()
         self._dirty = False
+        self._log: list = []     # (version, world, gx, gy, gz) — см. ScanStore
+        self._log_start = 0
         self._load()
+        self._log_start = self.version
         thread = threading.Thread(target=self._saver, daemon=True)
         thread.start()
 
@@ -499,13 +540,14 @@ class WalkedStore:
             with self._lock:
                 if not self._dirty:
                     continue
-                raw = {
-                    "worlds": {
-                        world: [[k[0], k[1], k[2]] for k in cells]
-                        for world, cells in self.worlds.items()
-                    }
-                }
                 self._dirty = False
+                snapshot = {world: list(cells) for world, cells in self.worlds.items()}
+            raw = {
+                "worlds": {
+                    world: [[k[0], k[1], k[2]] for k in keys]
+                    for world, keys in snapshot.items()
+                }
+            }
             try:
                 write_json_atomic(self.persist_path, raw)
             except OSError:
@@ -536,11 +578,24 @@ class WalkedStore:
                         bumped = True
                     cells[key] = self.version
                     self._dirty = True
+                    self._log.append((self.version, world, key[0], key[1], key[2]))
+            if len(self._log) > 200_000:
+                del self._log[:100_000]
+                self._log_start = self._log[0][0] if self._log else self.version
 
     def query(self, world: str, since: int):
         with self._lock:
-            cells = self.worlds.get(world, {})
-            changed = [[k[0], k[1], k[2]] for k, v in cells.items() if v > since]
+            if since >= self._log_start:
+                changed = []
+                for entry in reversed(self._log):
+                    if entry[0] <= since:
+                        break
+                    if entry[1] == world:
+                        changed.append([entry[2], entry[3], entry[4]])
+                changed.reverse()
+            else:
+                cells = self.worlds.get(world, {})
+                changed = [[k[0], k[1], k[2]] for k, v in cells.items() if v > since]
             return {"version": self.version, "world": world, "cells": changed}
 
 
