@@ -149,6 +149,10 @@ const View3D = (() => {
   let hudCanvas = null;     // 2D-оверлей для подписей
   let hudCtx = null;
   let lastMvp = null;
+  let labelBoxes = [];      // клик-зоны подписей за последний кадр (как в 2D)
+  let pickCallback = null;  // вызывается при клике по метке в 3D
+  let lastInteract = 0;     // время последнего ввода — для авто-облёта в простое
+  let autoOrbit = true;     // медленный облёт после простоя
 
   // Орбитальная камера вокруг цели (в метрах, оси UE)
   const camera = {
@@ -419,7 +423,7 @@ const View3D = (() => {
   function setWaypoints(list) {
     waypoints = list.map(w => {
       const [x, y, z] = toGL(w.x, w.y, w.z);
-      return { x, y, z, name: w.name };
+      return { x, y, z, name: w.name, type: w.type, id: w.id };
     });
     const data = new Float32Array(waypoints.length * 6);
     let offset = 0;
@@ -519,6 +523,12 @@ const View3D = (() => {
       canvas.height = canvas.clientHeight;
     }
 
+    // Авто-облёт: после 15 с без ввода камера медленно вращается вокруг цели
+    // (это игрок, если включён Follow) — даёт параллакс для восприятия глубины
+    if (autoOrbit && performance.now() - lastInteract > 15000) {
+      camera.yaw -= 0.0016; // ~5.5°/с при 60 fps
+    }
+
     // Сцена рисуется в оффскрин-текстуру (глубина в альфе), затем EDL-проход
     // кладёт её на экран с подсветкой контуров. Без FBO — напрямую.
     const useEdl = ensureFbo(canvas.width, canvas.height);
@@ -607,6 +617,7 @@ const View3D = (() => {
     hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
     hudCtx.font = "13px 'Segoe UI', sans-serif";
     hudCtx.textAlign = "center";
+    labelBoxes = [];
     for (const w of waypoints) {
       const p = project(w.x, w.y, w.z);
       if (!p) continue;
@@ -619,29 +630,81 @@ const View3D = (() => {
       hudCtx.fillRect(p.x - width / 2, p.y - 34, width, 20);
       hudCtx.fillStyle = "#ff59d9";
       hudCtx.fillText(label, p.x, p.y - 20);
+      // Клик-зона: и по подписи, и по маркеру-точке (радиус у p)
+      if (w.type && w.id !== undefined) {
+        labelBoxes.push({
+          type: w.type, id: w.id,
+          x0: p.x - width / 2, x1: p.x + width / 2, y0: p.y - 34, y1: p.y - 14,
+          px: p.x, py: p.y,
+        });
+      }
     }
+  }
+
+  // Что под кликом (px канваса): подпись или маркер. {type, id} или null.
+  function pickMarker(sx, sy) {
+    // Подписи — первыми (нарисованные позже лежат сверху), с конца
+    for (let i = labelBoxes.length - 1; i >= 0; i--) {
+      const b = labelBoxes[i];
+      if (sx >= b.x0 && sx <= b.x1 && sy >= b.y0 && sy <= b.y1) {
+        return { type: b.type, id: b.id };
+      }
+    }
+    // Иначе — ближайшая точка-маркер в радиусе
+    let best = null, bestDist = 16;
+    for (const b of labelBoxes) {
+      const d = Math.hypot(sx - b.px, sy - b.py);
+      if (d <= bestDist) { bestDist = d; best = { type: b.type, id: b.id }; }
+    }
+    return best;
   }
 
   // ==================== Управление ====================
 
+  function poke() { lastInteract = performance.now(); }
+
+  function eventXY(e) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
   function bindInput() {
     let dragging = null; // {mode: "orbit"|"pan", x, y}
+    let downAt = null;   // позиция mousedown — отличить клик от вращения
 
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
     canvas.addEventListener("mousedown", (e) => {
       const mode = (e.button === 2 || e.shiftKey) ? "pan" : "orbit";
-      dragging = { mode, x: e.clientX, y: e.clientY };
+      dragging = { mode, x: e.clientX, y: e.clientY, moved: false };
+      downAt = { x: e.clientX, y: e.clientY, button: e.button };
+      poke();
     });
 
-    window.addEventListener("mouseup", () => { dragging = null; });
+    window.addEventListener("mouseup", (e) => {
+      // Клик без вращения по левой кнопке = выбор метки
+      if (downAt && downAt.button === 0 && active && pickCallback &&
+          Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) {
+        const p = eventXY(e);
+        const hit = pickMarker(p.x, p.y);
+        if (hit) pickCallback(hit);
+      }
+      dragging = null;
+      downAt = null;
+    });
 
     window.addEventListener("mousemove", (e) => {
+      // Курсор-указатель над кликабельной меткой (когда не вращаем)
+      if (active && !dragging && pickCallback) {
+        const p = eventXY(e);
+        canvas.style.cursor = pickMarker(p.x, p.y) ? "pointer" : "";
+      }
       if (!dragging || !active) return;
       const dx = e.clientX - dragging.x;
       const dy = e.clientY - dragging.y;
       dragging.x = e.clientX;
       dragging.y = e.clientY;
+      poke();
       if (dragging.mode === "orbit") {
         camera.yaw -= dx * 0.006;
         camera.pitch = Math.min(Math.PI / 2 - 0.01, Math.max(-Math.PI / 2 + 0.01, camera.pitch + dy * 0.006));
@@ -656,17 +719,23 @@ const View3D = (() => {
 
     canvas.addEventListener("wheel", (e) => {
       e.preventDefault();
+      poke();
       camera.dist = Math.min(500, Math.max(2, camera.dist * (e.deltaY > 0 ? 1.15 : 1 / 1.15)));
     }, { passive: false });
 
     // Тач: один палец — вращение, два — щипок (зум) и сдвиг (панорама)
     let touch = null;
 
+    let tapStart = null; // для распознавания тапа по метке на телефоне
+
     canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
+      poke();
       if (e.touches.length === 1) {
         touch = { mode: "orbit", x: e.touches[0].clientX, y: e.touches[0].clientY };
+        tapStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       } else if (e.touches.length === 2) {
+        tapStart = null;
         const [a, b] = e.touches;
         touch = {
           mode: "pinch",
@@ -678,10 +747,14 @@ const View3D = (() => {
 
     canvas.addEventListener("touchmove", (e) => {
       e.preventDefault();
+      poke();
       if (!touch || !active) return;
       if (touch.mode === "orbit" && e.touches.length === 1) {
         const dx = e.touches[0].clientX - touch.x;
         const dy = e.touches[0].clientY - touch.y;
+        if (tapStart && Math.hypot(e.touches[0].clientX - tapStart.x, e.touches[0].clientY - tapStart.y) > 8) {
+          tapStart = null; // палец поехал — это вращение, не тап
+        }
         touch.x = e.touches[0].clientX;
         touch.y = e.touches[0].clientY;
         camera.yaw -= dx * 0.008;
@@ -703,7 +776,15 @@ const View3D = (() => {
     }, { passive: false });
 
     canvas.addEventListener("touchend", (e) => {
-      if (e.touches.length === 0) touch = null;
+      if (e.touches.length === 0) {
+        touch = null;
+        if (tapStart && active && pickCallback) {
+          const rect = canvas.getBoundingClientRect();
+          const hit = pickMarker(tapStart.x - rect.left, tapStart.y - rect.top);
+          if (hit) pickCallback(hit);
+        }
+        tapStart = null;
+      }
     }, { passive: false });
   }
 
@@ -720,6 +801,9 @@ const View3D = (() => {
     clearRoute() { routeCount = 0; },
     setSelectionLink,
     clearSelectionLink,
+    pickMarker,
+    onMarkerClick(fn) { pickCallback = fn; },
+    setAutoOrbit(on) { autoOrbit = !!on; },
     centerOn(x, y, z) {
       camera.target = toGL(x, y, z);
     },
@@ -728,6 +812,7 @@ const View3D = (() => {
     },
     start() {
       active = true;
+      poke(); // отсчёт простоя с момента открытия 3D
       render();
     },
     stop() {

@@ -3,6 +3,25 @@
 Release checklist: bump `VERSION` in `server/server.py`, add a section here,
 rebuild `dist/AF-LiveMap-<version>.zip`, upload to Nexus.
 
+## 0.3.3 — 2026-07-11
+
+- **2D zoomed-out view fixed:** at low zoom the map used to collapse into
+  coarse 32 m blocks (whole-chunk squares). Now every scanned column is
+  plotted as one pixel via ImageData, so the real facility structure —
+  corridors, rooms, height coloring — stays readable at any zoom. The
+  ImageData path also covers mid-zoom, cutting that rebuild from ~296 ms
+  to ~147 ms; incremental delta painting works in this mode too, so the
+  3-second scan stutter does not come back.
+- **3D marker clicks:** markers in the 3D view are now clickable (they
+  carried no type/id before, so clicking did nothing). Click a label or
+  its dot to select the element, same as in 2D; cursor turns into a
+  pointer on hover, and tapping works on touch. Traders now appear as 3D
+  markers too.
+- **Idle auto-orbit:** after 15 s without input the 3D camera slowly
+  orbits the target (your character when Follow is on), giving the
+  parallax needed to read depth in a still frame. Any mouse/touch input
+  stops it instantly.
+
 ## 0.3.2 — 2026-07-10
 
 - **perf:** eliminated the stutter every 3 s during active scanning:

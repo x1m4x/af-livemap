@@ -24,7 +24,7 @@ if isinstance(sys.stdout, io.TextIOWrapper) and sys.stdout.encoding.lower() != "
 
 # Единственный источник версии: печатается при старте, отдаётся клиенту в
 # /api/worlds и показывается в шапке UI. Менять при каждом релизе (см. CHANGELOG.md).
-VERSION = "0.3.2"
+VERSION = "0.3.3"
 
 
 # ==================== Console localization (en/ru) ====================

@@ -251,12 +251,17 @@ const SCAN_BUCKET_COLORS = [
   "rgba(190, 242, 120, 0.6)",  // выше
   "rgba(148, 163, 184, 0.45)", // высоко выше
 ];
+// Те же корзины в RGB — для попиксельной отрисовки через ImageData (LOD)
+const SCAN_BUCKET_RGB = [
+  [30, 58, 108], [37, 99, 190], [48, 150, 230], [56, 189, 248],
+  [134, 239, 172], [190, 242, 120], [148, 163, 184],
+];
 
 // Перерисовать offscreen-канвас скана для видимого региона (вьюпорт + запас).
 // Обходим только чанки, попавшие в регион, — не весь скан. На колонку берётся
 // воксель, ближайший по высоте к игроку; перепады высот читаются цветом.
-// При сильном отдалении (LOD) рисуем чанки целиком: квадрат с яркостью по
-// плотности вместо миллионов неразличимых точек.
+// При отдалении (LOD) каждая колонка кладётся в один пиксель через ImageData —
+// структура карты сохраняется на любом зуме (в отличие от старых блоков-чанков).
 function rebuildScanCanvas() {
   state.scan.dirty = false;
   state.scan.canvas = null;
@@ -293,22 +298,44 @@ function rebuildScanCanvas() {
   const octx = off.getContext("2d");
 
   const cellDrawPx = pxPerCell * scale;
-  const lod = cellDrawPx < 1.1; // клетка меньше пикселя — рисуем чанками
+  // Попиксельный (ImageData) режим, пока клетка мельче ~2.5px: он и выглядит
+  // как чистая карта, и строится быстрее fillRect-пути на десятках тысяч клеток.
+  // fillRect-путь остаётся только для близкого зума (крупные чёткие клетки).
+  const lod = cellDrawPx < 2.5;
   state.scan.lod = lod;
 
   if (lod) {
-    const sizePx = chunkPx * scale;
+    // Каждая колонка → один пиксель ImageData. Несколько колонок на пиксель =
+    // побеждает ближайшая к высоте игрока (перезапись). Так виден настоящий
+    // силуэт помещений, а не 32-метровые блоки.
+    const img = octx.createImageData(off.width, off.height);
+    const data = img.data;
+    const W = off.width, H = off.height;
     for (let cy = cy0; cy <= cy1; cy++) {
       for (let cx = cx0; cx <= cx1; cx++) {
         const chunk = state.scan.chunks.get(cx + ":" + cy);
-        if (!chunk || chunk.size === 0) continue;
-        const density = chunk.size / (CHUNK * CHUNK);
-        const alpha = Math.min(0.85, 0.18 + Math.sqrt(density) * 1.1);
-        octx.fillStyle = `rgba(56, 189, 248, ${alpha.toFixed(2)})`;
-        octx.fillRect((cx * chunkPx - x0) * scale, (cy * chunkPx - y0) * scale,
-                      sizePx + 0.5, sizePx + 0.5);
+        if (!chunk) continue;
+        for (const colKey of chunk) {
+          const col = state.scan.columns.get(colKey);
+          if (!col || col.zs.size === 0) continue;
+          const px = (col.gx + 0.5) * pxPerCell;
+          const py = (col.gy + 0.5) * pxPerCell;
+          if (px < x0 || px > x1 || py < y0 || py > y1) continue;
+          const ix = ((px - x0) * scale) | 0;
+          const iy = ((py - y0) * scale) | 0;
+          if (ix < 0 || ix >= W || iy < 0 || iy >= H) continue;
+          let bestGz = null, bestDz = Infinity;
+          for (const gz of col.zs.keys()) {
+            const dz = refZ === null ? 0 : Math.abs(gz * SCAN_CELL - refZ);
+            if (bestGz === null || dz < bestDz) { bestGz = gz; bestDz = dz; }
+          }
+          const rgb = SCAN_BUCKET_RGB[refZ === null ? 3 : scanBucket(bestGz * SCAN_CELL - refZ)];
+          const o = (iy * W + ix) * 4;
+          data[o] = rgb[0]; data[o + 1] = rgb[1]; data[o + 2] = rgb[2]; data[o + 3] = 255;
+        }
       }
     }
+    octx.putImageData(img, 0, 0);
   } else {
     // Плоские массивы координат по цветовым корзинам — минимум аллокаций
     const buckets = SCAN_BUCKET_COLORS.map(() => []);
@@ -356,7 +383,9 @@ function rebuildScanCanvas() {
 function paintScanDelta(touchedCols) {
   const s = state.scan;
   if (s.dirty) return; // всё равно предстоит полная пересборка
-  if (!s.canvas || !s.view || s.lod) { s.dirty = true; return; }
+  if (!s.canvas || !s.view) { s.dirty = true; return; }
+  // Работает и в LOD-режиме (1px-точки): дорисовать пару сотен новых колонок
+  // дешевле полной пересборки — иначе при скане вернулись бы рывки каждые 3 с
   const viewing = state.world === state.viewedWorld;
   const refZ = (viewing && s.refZ !== null) ? s.refZ : null;
   const pxPerCell = SCAN_CELL * WORLD_SCALE;
@@ -403,25 +432,31 @@ function scanRegionStale() {
 // В 3D-вид уходят и вейпоинты, и остановки лифтов (как маркеры с подписями)
 function syncView3dMarkers() {
   if (!view3dReady) return;
-  const markers = [...state.waypoints];
+  // type/id уходят в 3D, чтобы клик по метке выбирал элемент (как в 2D)
+  const markers = state.waypoints.map(w => ({
+    x: w.x, y: w.y, z: w.z, name: w.name, type: "wp", id: w.id,
+  }));
+  for (const tr of state.traders) {
+    markers.push({ x: tr.x, y: tr.y, z: tr.z, name: tr.name, type: "trader", id: tr.id });
+  }
   for (const elevator of state.elevators) {
     for (const z of elevator.stops) {
-      markers.push({ x: elevator.x, y: elevator.y, z, name: elevator.name });
+      markers.push({ x: elevator.x, y: elevator.y, z, name: elevator.name, type: "elevator", id: elevator.id });
     }
   }
   for (const portal of state.portals) {
     if (portal.from.world === state.viewedWorld) {
-      markers.push({ x: portal.from.x, y: portal.from.y, z: portal.from.z, name: "◎ " + portal.name });
+      markers.push({ x: portal.from.x, y: portal.from.y, z: portal.from.z, name: "◎ " + portal.name, type: "portal", id: portal.id });
     }
     if (portal.to.world === state.viewedWorld) {
-      markers.push({ x: portal.to.x, y: portal.to.y, z: portal.to.z, name: "◎ " + t("portal_exit_prefix") + portal.name });
+      markers.push({ x: portal.to.x, y: portal.to.y, z: portal.to.z, name: "◎ " + t("portal_exit_prefix") + portal.name, type: "portal", id: portal.id });
     }
   }
   for (const cart of state.carts) {
     const first = cart.path[0];
     const last = cart.path[cart.path.length - 1];
-    markers.push({ x: first[0], y: first[1], z: first[2], name: "⛟ " + cart.name });
-    markers.push({ x: last[0], y: last[1], z: last[2], name: "⛟ " + cart.name });
+    markers.push({ x: first[0], y: first[1], z: first[2], name: "⛟ " + cart.name, type: "cart", id: cart.id });
+    markers.push({ x: last[0], y: last[1], z: last[2], name: "⛟ " + cart.name, type: "cart", id: cart.id });
   }
   View3D.setWaypoints(markers);
 }
@@ -2207,6 +2242,11 @@ document.getElementById("view3dBtn").addEventListener("click", () => {
       return;
     }
     View3D.setFloorFocus(state.floor3d);
+    // Клик по метке в 3D выбирает элемент — как в 2D
+    View3D.onMarkerClick((hit) => {
+      selectMapItem(hit.type, hit.id);
+      updateSelection3d();
+    });
   }
   state.view3d = !state.view3d;
   canvas3d.classList.toggle("hidden", !state.view3d);
