@@ -1,4 +1,4 @@
-**English** · [Русский](README.ru.md)
+**English** · [Русский](README.ru.md) · [Changelog](CHANGELOG.md)
 
 # AF LiveMap
 
@@ -23,14 +23,14 @@ No pre-made maps needed: you just walk around and look, and the map reveals itse
 - The scan **persists between sessions** and is shared across all devices.
 
 ### 🧭 Two views
-- **2D** — top-down. Point color encodes height relative to the player (your level — bright cyan, above — green, below — blue), so floors and stairs read clearly. Works at any distance and height.
-- **3D** — a WebGL point cloud: free orbital camera, colored by distance to the player, thousands of points with no lag. Mouse on PC, touch on phone.
+- **2D** — top-down. Point color encodes height relative to the player (your level — bright cyan, above — green, below — blue), so floors and stairs read clearly. Stays readable and smooth at any zoom, even with millions of scanned voxels (chunked storage + per-pixel far view).
+- **3D** — a WebGL point cloud with depth cues: distance fog, Eye-Dome Lighting (surfaces behind other surfaces render darker, walls get contours), and a **"Floor ±5 m / Whole map"** toggle — your floor at full brightness, other floors as a faint ghost for context. Markers are clickable, same as in 2D. After 15 s without input the camera slowly orbits the target for extra depth (any input stops it). Mouse on PC, touch on phone.
 
 ### 📍 Markers, elevators, carts, portals
 - **Markers (waypoints)** — placed at the player's position, with a name. Rename, delete, "show on map", build a route.
 - **Elevators** — recorded with one button: stand in the cabin, press "Elevator", ride through the floors, press again. The map detects the stops by height. The elevator zone is excluded from the scan (the moving cabin no longer creates junk), and routes can ride between floors.
 - **Carts / rail transport** — the whole path is recorded; in routes it's a "start ↔ end" edge that draws the real rail trajectory.
-- **Portals — auto-detected.** Teleport (a big jump or a world change) and a portal is recorded automatically, both entrance and exit. Repeat passes confirm it. Death/respawn is not counted as a portal. There are **"no-portal" zones** — for a teleport-to-base item, so it doesn't spawn false portals.
+- **Portals — auto-detected.** Teleport (a big jump or a world change) and a portal is recorded automatically, both entrance and exit; the list shows how many times you traveled through each. Repeat passes confirm it. Death/respawn is not counted as a portal. There are **"no-portal" zones** (covering the whole height of your base) — for a teleport-to-base item, so it doesn't spawn false portals.
 - **Click to inspect & jump.** Click any element (or its list row) to select it: it's highlighted, its list row scrolls into view, and for portals/carts the **link between its two ends** is drawn (in 2D and 3D). Click a portal/cart again to **jump the camera to its other end** (cross-world portals switch to the destination world); elevator clicks cycle through its floors.
 
 ### 🚶 Routing that accounts for doors
@@ -100,7 +100,11 @@ AF LiveMap (this PC):  http://127.0.0.1:8765
 AF LiveMap (phone):    http://192.168.x.x:8765
 ```
 
-Open the first one on your PC. Launch the game — the status changes to "online: 1 | world: …" and the map starts building.
+Open the first one on your PC. Launch the game — the status changes to "online: 1 | world: …" and the map starts building. The running version is shown next to the logo in the top bar.
+
+> **Only one server per data folder.** Accidentally starting a second server used to
+> silently corrupt the saved scan; now the second instance refuses to start and tells
+> you which process already owns the data. Close the old one and start again.
 
 ### 4. Phone (optional)
 
