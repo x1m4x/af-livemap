@@ -95,7 +95,7 @@ function currentTransform() {
 
 async function loadWorlds() {
   try {
-    const resp = await fetch("/api/worlds");
+    const resp = await fetch("api/worlds");
     const payload = await resp.json();
     state.worlds = payload.worlds || [];
     // Версия приходит с сервера (единственный источник — server.py VERSION):
@@ -200,7 +200,7 @@ async function pollScan() {
       state.scan.version = 0;
       state.scan.world = state.viewedWorld;
     }
-    const resp = await fetch(`/api/scan?world=${encodeURIComponent(state.viewedWorld)}&since=${state.scan.version}`);
+    const resp = await fetch(`api/scan?world=${encodeURIComponent(state.viewedWorld)}&since=${state.scan.version}`);
     const payload = await resp.json();
     if (payload.world !== state.scan.world) return;
     // Смена epoch = на сервере удалялись ячейки (например, чистка зоны лифта):
@@ -464,7 +464,7 @@ function syncView3dMarkers() {
 async function loadWaypoints() {
   try {
     const world = state.viewedWorld;
-    const resp = await fetch(`/api/waypoints${world ? "?world=" + encodeURIComponent(world) : ""}`);
+    const resp = await fetch(`api/waypoints${world ? "?world=" + encodeURIComponent(world) : ""}`);
     state.waypoints = (await resp.json()).waypoints || [];
     renderWaypointList();
     syncView3dMarkers();
@@ -472,7 +472,7 @@ async function loadWaypoints() {
 }
 
 async function addWaypoint(name, x, y, z) {
-  const resp = await fetch("/api/waypoints", {
+  const resp = await fetch("api/waypoints", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "add", name, world: state.world, x, y, z }),
@@ -482,7 +482,7 @@ async function addWaypoint(name, x, y, z) {
 
 async function deleteWaypoint(id) {
   if (state.route.target && state.route.target.id === id) clearRoute();
-  await fetch("/api/waypoints", {
+  await fetch("api/waypoints", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "delete", id }),
@@ -587,7 +587,7 @@ function renderWaypointList() {
 
   for (const wp of state.waypoints) {
     makeRow(list, wp.name, wp, [
-      makeRenameButton("/api/waypoints", wp.id, wp.name, loadWaypoints),
+      makeRenameButton("api/waypoints", wp.id, wp.name, loadWaypoints),
       makeRouteButton(wp.id, wp.name, wp.world, wp.x, wp.y, wp.z),
       makeButton("×", () => {
         if (confirm(t("confirm_delete_waypoint", { name: wp.name }))) deleteWaypoint(wp.id);
@@ -600,7 +600,7 @@ function renderWaypointList() {
       t("trader_label", { name: tr.name }),
       tr,
       [
-        makeRenameButton("/api/traders", tr.id, tr.name, loadTraders),
+        makeRenameButton("api/traders", tr.id, tr.name, loadTraders),
         makeRouteButton(tr.id, tr.name, tr.world, tr.x, tr.y, tr.z),
         makeButton("×", () => {
           if (confirm(t("confirm_delete_trader", { name: tr.name }))) deleteTrader(tr.id);
@@ -614,7 +614,7 @@ function renderWaypointList() {
         doors: elevator.doors ? t("elevator_doors_suffix") : "" }),
       { x: elevator.x, y: elevator.y, z: elevator.stops[0] },
       [
-        makeRenameButton("/api/elevators", elevator.id, elevator.name, loadElevators),
+        makeRenameButton("api/elevators", elevator.id, elevator.name, loadElevators),
         makeButton("×", () => {
           if (confirm(t("confirm_delete_elevator", { name: elevator.name }))) deleteElevator(elevator.id);
         }, t("delete_btn")),
@@ -628,7 +628,7 @@ function renderWaypointList() {
       `◎ ${portal.name}${crossWorld ? ` (${portal.from.world} → ${portal.to.world})` : ""} · ${t("portal_uses", { n: portal.count })}`,
       anchor,
       [
-        makeRenameButton("/api/portals", portal.id, portal.name, loadPortals),
+        makeRenameButton("api/portals", portal.id, portal.name, loadPortals),
         makeRouteButton(`portal:${portal.id}`, portal.name, anchor.world, anchor.x, anchor.y, anchor.z),
         makeButton("×", () => {
           if (confirm(t("confirm_delete_portal", { name: portal.name }))) deletePortal(portal.id);
@@ -641,7 +641,7 @@ function renderWaypointList() {
       t("zone_label", { name: zone.name, m: (zone.radius / 100).toFixed(0) }),
       zone,
       [
-        makeRenameButton("/api/portals", zone.id, zone.name, loadPortals),
+        makeRenameButton("api/portals", zone.id, zone.name, loadPortals),
         makeButton("×", () => {
           if (confirm(t("confirm_delete_zone", { name: zone.name }))) {
             deletePortalIgnoreZone(zone.id);
@@ -657,7 +657,7 @@ function renderWaypointList() {
       t("cart_label", { name: cart.name, m: cartLengthMeters(cart).toFixed(0) }),
       { x: first[0], y: first[1], z: first[2] },
       [
-        makeRenameButton("/api/carts", cart.id, cart.name, loadCarts),
+        makeRenameButton("api/carts", cart.id, cart.name, loadCarts),
         makeRouteButton(`cart:${cart.id}:a`, t("cart_start_name", { name: cart.name }), cart.world, first[0], first[1], first[2], "▶A"),
         makeRouteButton(`cart:${cart.id}:b`, t("cart_end_name", { name: cart.name }), cart.world, last[0], last[1], last[2], "▶B"),
         makeButton("×", () => {
@@ -674,7 +674,7 @@ function renderWaypointList() {
 async function loadElevators() {
   try {
     const world = state.viewedWorld;
-    const resp = await fetch(`/api/elevators${world ? "?world=" + encodeURIComponent(world) : ""}`);
+    const resp = await fetch(`api/elevators${world ? "?world=" + encodeURIComponent(world) : ""}`);
     state.elevators = (await resp.json()).elevators || [];
     renderWaypointList();
     syncView3dMarkers();
@@ -682,7 +682,7 @@ async function loadElevators() {
 }
 
 async function deleteElevator(id) {
-  await fetch("/api/elevators", {
+  await fetch("api/elevators", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "delete", id }),
@@ -696,7 +696,7 @@ async function deleteElevator(id) {
 async function pollWalked() {
   try {
     if (state.viewedWorld) {
-      const resp = await fetch(`/api/walked?world=${encodeURIComponent(state.viewedWorld)}&since=${state.walkedVersion}`);
+      const resp = await fetch(`api/walked?world=${encodeURIComponent(state.viewedWorld)}&since=${state.walkedVersion}`);
       const payload = await resp.json();
       if (payload.world === state.viewedWorld) {
         for (const [gx, gy, gz] of payload.cells) {
@@ -941,7 +941,7 @@ function handleMapClick(sx, sy) {
 async function loadCarts() {
   try {
     const world = state.viewedWorld;
-    const resp = await fetch(`/api/carts${world ? "?world=" + encodeURIComponent(world) : ""}`);
+    const resp = await fetch(`api/carts${world ? "?world=" + encodeURIComponent(world) : ""}`);
     state.carts = (await resp.json()).carts || [];
     renderWaypointList();
     syncView3dMarkers();
@@ -949,7 +949,7 @@ async function loadCarts() {
 }
 
 async function deleteCart(id) {
-  await fetch("/api/carts", {
+  await fetch("api/carts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "delete", id }),
@@ -992,7 +992,7 @@ async function finishCartRecording() {
     t("cart_default_name", { n: state.carts.length + 1 }));
   if (name === null) return;
 
-  const resp = await fetch("/api/carts", {
+  const resp = await fetch("api/carts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "add", name: (name || t("cart_default_base")).trim(), world: state.world, path }),
@@ -1011,7 +1011,7 @@ async function finishCartRecording() {
 
 async function loadTraderCatalog() {
   try {
-    const resp = await fetch("/traders-catalog.json");
+    const resp = await fetch("traders-catalog.json");
     state.traderCatalog = await resp.json();
   } catch (err) { state.traderCatalog = { traders: [] }; }
 }
@@ -1024,7 +1024,7 @@ function catalogEntry(key) {
 async function loadTraders() {
   try {
     const world = state.viewedWorld;
-    const resp = await fetch(`/api/traders${world ? "?world=" + encodeURIComponent(world) : ""}`);
+    const resp = await fetch(`api/traders${world ? "?world=" + encodeURIComponent(world) : ""}`);
     state.traders = (await resp.json()).traders || [];
     renderWaypointList();
   } catch (err) { /* server unavailable */ }
@@ -1034,7 +1034,7 @@ async function loadTraders() {
 async function pollTraders() {
   try {
     if (state.viewedWorld) {
-      const resp = await fetch(`/api/traders?world=${encodeURIComponent(state.viewedWorld)}`);
+      const resp = await fetch(`api/traders?world=${encodeURIComponent(state.viewedWorld)}`);
       const fresh = (await resp.json()).traders || [];
       if (JSON.stringify(fresh) !== JSON.stringify(state.traders)) {
         state.traders = fresh;
@@ -1046,7 +1046,7 @@ async function pollTraders() {
 }
 
 async function addTrader(key, name, x, y, z) {
-  const resp = await fetch("/api/traders", {
+  const resp = await fetch("api/traders", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "add", key, name, world: state.world, x, y, z }),
@@ -1056,7 +1056,7 @@ async function addTrader(key, name, x, y, z) {
 
 async function deleteTrader(id) {
   if (state.selected.type === "trader" && state.selected.id === id) clearMapSelection();
-  await fetch("/api/traders", {
+  await fetch("api/traders", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "delete", id }),
@@ -1167,7 +1167,7 @@ function traderAt(sx, sy) {
 async function loadPortals() {
   try {
     const world = state.viewedWorld;
-    const resp = await fetch(`/api/portals${world ? "?world=" + encodeURIComponent(world) : ""}`);
+    const resp = await fetch(`api/portals${world ? "?world=" + encodeURIComponent(world) : ""}`);
     const payload = await resp.json();
     state.portals = payload.portals || [];
     state.portalIgnore = payload.ignore || [];
@@ -1186,7 +1186,7 @@ function inPortalIgnoreZone(world, x, y, z) {
 }
 
 async function addPortalIgnoreZone(name, radius, x, y, z) {
-  const resp = await fetch("/api/portals", {
+  const resp = await fetch("api/portals", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "add_ignore", name, world: state.world, x, y, z, radius }),
@@ -1199,7 +1199,7 @@ async function addPortalIgnoreZone(name, radius, x, y, z) {
 }
 
 async function deletePortalIgnoreZone(id) {
-  await fetch("/api/portals", {
+  await fetch("api/portals", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "delete_ignore", id }),
@@ -1208,7 +1208,7 @@ async function deletePortalIgnoreZone(id) {
 }
 
 async function deletePortal(id) {
-  await fetch("/api/portals", {
+  await fetch("api/portals", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "delete", id }),
@@ -1225,7 +1225,7 @@ async function reportPortal(from, to) {
   const crossWorld = from.world !== to.world;
   const name = crossWorld ? t("portal_name_cross", { world: to.world }) : t("portal_name");
   try {
-    const resp = await fetch("/api/portals", {
+    const resp = await fetch("api/portals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "add", name, from, to }),
@@ -1349,7 +1349,7 @@ async function finishElevatorRecording() {
   // Elevators with doors get a wider zone: doors are a "flickering" wall in the scan, excluded too
   const doors = confirm(t("elevator_doors_confirm"));
 
-  const resp = await fetch("/api/elevators", {
+  const resp = await fetch("api/elevators", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -1619,7 +1619,7 @@ function recalcRoute() {
 
 function connectStream() {
   const statusEl = document.getElementById("status");
-  const source = new EventSource("/api/stream");
+  const source = new EventSource("api/stream");
   let lastPlayerWorld = null;
 
   source.onopen = () => {
@@ -2429,7 +2429,7 @@ let notesSaveTimer = null;
 
 async function loadNotes() {
   try {
-    const data = await (await fetch("/api/notes")).json();
+    const data = await (await fetch("api/notes")).json();
     notesServerText = data.text;
     notesText.value = data.text;
     notesStatus.textContent = t("notes_synced");
@@ -2442,7 +2442,7 @@ async function saveNotes() {
   const text = notesText.value;
   notesStatus.textContent = t("notes_saving");
   try {
-    const resp = await fetch("/api/notes", {
+    const resp = await fetch("api/notes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
@@ -2469,7 +2469,7 @@ async function pollNotes() {
   try {
     const popupOpen = !document.getElementById("notesPopup").classList.contains("hidden");
     if (popupOpen && notesServerText !== null) {
-      const data = await (await fetch("/api/notes")).json();
+      const data = await (await fetch("api/notes")).json();
       const localDirty = notesText.value !== notesServerText;
       if (data.text !== notesServerText && !localDirty && document.activeElement !== notesText) {
         notesServerText = data.text;
@@ -2499,7 +2499,7 @@ pollNotes();
 
 async function initImagesPopup() {
   try {
-    const resp = await fetch("/api/maps");
+    const resp = await fetch("api/maps");
     const config = await resp.json();
     const select = document.getElementById("imageSelect");
     select.innerHTML = "";
@@ -2511,7 +2511,7 @@ async function initImagesPopup() {
       select.appendChild(option);
     }
     select.addEventListener("change", () => {
-      document.getElementById("imageView").src = "/maps/" + select.value;
+      document.getElementById("imageView").src = "maps/" + select.value;
     });
   } catch (err) { /* server unavailable */ }
 }
@@ -2520,7 +2520,7 @@ document.getElementById("imagesBtn").addEventListener("click", () => {
   const popup = document.getElementById("imagesPopup");
   popup.classList.remove("hidden");
   const select = document.getElementById("imageSelect");
-  if (select.value) document.getElementById("imageView").src = "/maps/" + select.value;
+  if (select.value) document.getElementById("imageView").src = "maps/" + select.value;
 });
 
 document.getElementById("imagesClose").addEventListener("click", () => {

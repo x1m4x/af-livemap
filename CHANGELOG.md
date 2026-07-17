@@ -3,6 +3,17 @@
 Release checklist: bump `VERSION` in `server/server.py`, add a section here,
 rebuild `dist/AF-LiveMap-<version>.zip`, upload to Nexus.
 
+## 0.3.4 — 2026-07-17
+
+- **Works behind a reverse proxy at a sub-path.** All the web UI's requests
+  (`/api/…`, `/maps/…`, the SSE stream, the trader catalog) were absolute
+  from the host root, so serving the map through a proxy at a path like
+  `https://host/aflivemap/` broke every reference. They're now relative to
+  the page, so a sub-path proxy just works — no editing the `.js`. Behaves
+  identically at the root. (Configure the proxy to strip the sub-path prefix,
+  the standard setup, e.g. nginx `location /aflivemap/ { proxy_pass
+  http://127.0.0.1:8765/; }`.)
+
 ## 0.3.3 — 2026-07-11
 
 - **2D zoomed-out view fixed:** at low zoom the map used to collapse into
