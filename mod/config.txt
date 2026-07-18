@@ -51,3 +51,18 @@ scan_rays = 12
 # Ray range in centimeters (100 cm = 1 m). Default 6000 (60 m).
 # Дальность луча в сантиметрах (100 см = 1 м). По умолчанию 6000 (60 м).
 scan_range_cm = 6000
+
+# Where the rays go. 0 = the whole sphere around you (default): you map
+# everything nearby without aiming, but the rays spread thin, so distant
+# surfaces fill in slowly. A value in degrees fires them in a cone in the
+# direction you are LOOKING instead - same ray count, much denser, so big
+# rooms and long corridors map far faster. You then map what you look at.
+# Suggested: 60-90. Values under 10 are raised to 10; 360 or more means 0.
+#
+# Куда летят лучи. 0 = вся сфера вокруг (по умолчанию): карта строится без
+# прицеливания, но лучи размазаны, и дальние поверхности заполняются долго.
+# Значение в градусах пускает их конусом ТУДА, КУДА ТЫ СМОТРИШЬ - лучей
+# столько же, но плотность куда выше, поэтому большие залы и длинные коридоры
+# сканируются намного быстрее. Тогда карта строится по направлению взгляда.
+# Рекомендуется 60-90. Меньше 10 поднимается до 10; 360 и больше = 0.
+scan_cone_deg = 0

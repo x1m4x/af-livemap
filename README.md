@@ -129,6 +129,7 @@ The file `ue4ss\Mods\AFLiveMap\config.txt` is a plain `key = value` file, editab
 | `scan_enabled` | `true` | Fully disable lidar (player positions are still written). |
 | `scan_rays` | `12` | Rays per tick. More = faster map, higher load. |
 | `scan_range_cm` | `6000` | Ray range, cm (6000 = 60 m). |
+| `scan_cone_deg` | `0` | `0` = rays cover the whole sphere around you (map everything nearby, no aiming). A value in degrees (try `60`–`90`) fires them in a cone where you're **looking** — same ray count, much denser, so large rooms map far faster. |
 
 ### Rat Scanner gating
 

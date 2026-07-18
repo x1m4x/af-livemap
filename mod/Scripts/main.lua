@@ -53,6 +53,8 @@ local SCAN_ENABLED = true
 local SCAN_RAYS = 12
 local SCAN_RANGE = 6000.0       -- ray range, cm (60 m)
 local SCAN_MIN_DISTANCE = 60.0  -- closer than this = own body/held item, noise
+local SCAN_CONE_DEG = 0         -- 0 = full sphere; >0 = cone around the view
+local SCAN_CONE_COS = -1.0      -- cos(cone/2), recomputed when config loads
 
 -- Gate scanning behind the Rat Scanner item.
 -- require_rat_scanner = true  -> map is built ONLY while holding the Rat Scanner.
@@ -172,6 +174,8 @@ local function LoadConfig()
                 SCAN_RAYS = tonumber(value) or SCAN_RAYS
             elseif key == "scan_range_cm" then
                 SCAN_RANGE = tonumber(value) or SCAN_RANGE
+            elseif key == "scan_cone_deg" then
+                SCAN_CONE_DEG = tonumber(value) or SCAN_CONE_DEG
             elseif key == "log_held_item" then
                 LOG_HELD_ITEM = ParseBool(value, LOG_HELD_ITEM)
             elseif key == "language" then
@@ -184,6 +188,14 @@ local function LoadConfig()
         end
     end
     file:close()
+    -- Clamp to a sane range; anything >= 360 is just the full sphere again
+    if SCAN_CONE_DEG and SCAN_CONE_DEG > 0 then
+        if SCAN_CONE_DEG < 10 then SCAN_CONE_DEG = 10 end
+        if SCAN_CONE_DEG >= 360 then SCAN_CONE_DEG = 0 end
+    else
+        SCAN_CONE_DEG = 0
+    end
+    SCAN_CONE_COS = (SCAN_CONE_DEG > 0) and math.cos(math.rad(SCAN_CONE_DEG / 2)) or -1.0
     ResolveLanguage()
     Log(T("config_loaded", tostring(REQUIRE_RAT_SCANNER), SCANNER_ITEM_MATCH, activeLang))
 end
@@ -476,18 +488,63 @@ local function CollectLidar(localPawn)
     local cameraLocation = camera:GetCameraLocation()
     local origin = { X = cameraLocation.X, Y = cameraLocation.Y, Z = cameraLocation.Z }
 
+    -- Cone mode: aim the spiral at where the player looks instead of spraying
+    -- the whole sphere. Angular density is fixed, so full-sphere hits drift
+    -- ~7 m apart at 30 m; a 60 deg cone packs the same rays ~4x tighter, which
+    -- is what makes large rooms practical to map.
+    local fwd, right, up
+    if SCAN_CONE_DEG > 0 then
+        local rot = camera:GetCameraRotation()
+        local p = math.rad(rot.Pitch)
+        local y = math.rad(rot.Yaw)
+        local cp = math.cos(p)
+        fwd = { X = cp * math.cos(y), Y = cp * math.sin(y), Z = math.sin(p) }
+        -- Any basis perpendicular to fwd works (the cone is symmetric); switch
+        -- the reference axis when looking almost straight up/down.
+        local ref = (math.abs(fwd.Z) < 0.99) and { X = 0, Y = 0, Z = 1 } or { X = 1, Y = 0, Z = 0 }
+        right = {
+            X = ref.Y * fwd.Z - ref.Z * fwd.Y,
+            Y = ref.Z * fwd.X - ref.X * fwd.Z,
+            Z = ref.X * fwd.Y - ref.Y * fwd.X,
+        }
+        local rl = math.sqrt(right.X * right.X + right.Y * right.Y + right.Z * right.Z)
+        if rl < 1e-6 then rl = 1 end
+        right.X, right.Y, right.Z = right.X / rl, right.Y / rl, right.Z / rl
+        up = {
+            X = fwd.Y * right.Z - fwd.Z * right.Y,
+            Y = fwd.Z * right.X - fwd.X * right.Z,
+            Z = fwd.X * right.Y - fwd.Y * right.X,
+        }
+    end
+
     local points = {}
     for _ = 1, SCAN_RAYS do
         local cyclePos = (rayIndex % SPIRAL_PERIOD + 0.5) / SPIRAL_PERIOD
-        local dz = 1.0 - 2.0 * cyclePos
-        local radius = math.sqrt(math.max(0.0, 1.0 - dz * dz))
         local phi = rayIndex * GOLDEN_ANGLE
         rayIndex = rayIndex + 1
 
+        local dirX, dirY, dirZ
+        if fwd then
+            -- dz spans [cos(half), 1] -> the spiral fills a disc around fwd
+            local dz = 1.0 - cyclePos * (1.0 - SCAN_CONE_COS)
+            local radius = math.sqrt(math.max(0.0, 1.0 - dz * dz))
+            local lx = math.cos(phi) * radius
+            local ly = math.sin(phi) * radius
+            dirX = right.X * lx + up.X * ly + fwd.X * dz
+            dirY = right.Y * lx + up.Y * ly + fwd.Y * dz
+            dirZ = right.Z * lx + up.Z * ly + fwd.Z * dz
+        else
+            local dz = 1.0 - 2.0 * cyclePos
+            local radius = math.sqrt(math.max(0.0, 1.0 - dz * dz))
+            dirX = math.cos(phi) * radius
+            dirY = math.sin(phi) * radius
+            dirZ = dz
+        end
+
         local endPoint = {
-            X = origin.X + math.cos(phi) * radius * SCAN_RANGE,
-            Y = origin.Y + math.sin(phi) * radius * SCAN_RANGE,
-            Z = origin.Z + dz * SCAN_RANGE,
+            X = origin.X + dirX * SCAN_RANGE,
+            Y = origin.Y + dirY * SCAN_RANGE,
+            Z = origin.Z + dirZ * SCAN_RANGE,
         }
         local hitResult = {}
         local wasHit = ksl:LineTraceSingle(

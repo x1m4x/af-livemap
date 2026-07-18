@@ -3,6 +3,21 @@
 Release checklist: bump `VERSION` in `server/server.py`, add a section here,
 rebuild `dist/AF-LiveMap-<version>.zip`, upload to Nexus.
 
+## 0.3.5 — 2026-07-18
+
+- **New `scan_cone_deg` option — map large areas much faster.** The rays are
+  spread over the whole sphere, and their angular density is fixed, so the
+  gap between hits grows with distance: ~1.1 m at 5 m but ~6.9 m at 30 m.
+  That's why a small room fills in quickly while a big hall feels like it
+  never finishes (reaching one-voxel spacing at 30 m would need ~45,000
+  directions). Setting `scan_cone_deg` to e.g. `60`–`90` fires the same rays
+  in a cone in the direction you're **looking** instead: a 60° cone is ~3.9×
+  denser, so halls and long corridors map far faster — you map what you look
+  at. Default `0` keeps the existing full-sphere behaviour unchanged.
+- `maps.example.json` now shows several entries, so the "one `{ }` per sector,
+  comma separated" format is obvious, and drops the `worldMatch`/`transform`
+  fields left over from the removed calibration system (never read).
+
 ## 0.3.4 — 2026-07-17
 
 - **Works behind a reverse proxy at a sub-path.** All the web UI's requests
