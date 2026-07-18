@@ -1,12 +1,8 @@
 {
-  "_comment": "Copy to maps.json and add your own sector images into maps/. The scan map (2D/3D) works without images — the 'Maps' popup just stays empty.",
+  "_comment": "Copy this file to maps.json and put your sector images in this folder. Each sector is its OWN { ... } object inside the list, separated by commas — do not repeat keys inside one object. Only \"name\" (shown in the dropdown) and \"image\" (file name) are used.",
   "maps": [
-    {
-      "id": "placeholder",
-      "name": "Placeholder (сетка)",
-      "image": "placeholder.svg",
-      "worldMatch": null,
-      "transform": { "m11": 0.01, "m12": 0, "m21": 0, "m22": 0.01, "tx": 1000, "ty": 1000 }
-    }
+    { "id": "placeholder", "name": "Placeholder (grid)", "image": "placeholder.svg" },
+    { "name": "Office Sector 1", "image": "OfficeSector1.png" },
+    { "name": "Manufacturing West", "image": "ManufacturingWest.png" }
   ]
 }
