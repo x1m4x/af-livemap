@@ -17,8 +17,9 @@ No pre-made maps needed: you just walk around and look, and the map reveals itse
 ## Features
 
 ### 🗺️ Map scanner — point cloud
-- Every tick the mod casts dozens of rays from the camera over a sphere (lidar). Wall hits accumulate into a 50 cm voxel grid.
-- The map builds itself **from looking around** — no need to walk along every wall, just pan the camera.
+- Every tick the mod casts rays from the camera (lidar). Wall hits accumulate into a 50 cm voxel grid.
+- By default the rays cover the **whole sphere** around you, so you don't have to aim at anything — just walk and everything nearby fills in, including floors, ceilings and what's behind you.
+- Their angular spread is fixed, so nearby surfaces fill in almost instantly while distant ones come in slowly (hits land ~0.5 m apart at 2 m, but ~7 m apart at 30 m). For large halls set **`scan_cone_deg`** (try `60`–`90`) — the same rays are fired in a cone where you're **looking**, roughly 4× denser, so big spaces map far faster; the trade-off is that you then map what you look at.
 - **Purely additive by default:** points are never deleted, so walls never vanish. Optional auto-cleaning of "ghosts" (moving cars/NPCs) can be enabled with the server `--carve` flag.
 - The scan **persists between sessions** and is shared across all devices.
 
@@ -114,6 +115,22 @@ Open the second address (`http://192.168.x.x:8765`) on a phone on the same Wi-Fi
 netsh advfirewall firewall add rule name="AF LiveMap" dir=in action=allow protocol=TCP localport=8765
 ```
 
+### 5. Behind a reverse proxy (optional)
+
+The web UI uses only relative paths, so you can serve it through a proxy at a
+sub-path (e.g. for HTTPS or remote access) without touching any code. Point the
+proxy at the server with the sub-path prefix stripped — in nginx that's the
+trailing slash on `proxy_pass`:
+
+```nginx
+location /aflivemap/ {
+    proxy_pass http://127.0.0.1:8765/;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";   # keeps the live position stream (SSE) open
+    proxy_buffering off;              # ditto — otherwise updates arrive in bursts
+}
+```
+
 ---
 
 ## Configuration (config.txt)
@@ -150,7 +167,19 @@ If the map doesn't build with the Rat Scanner in hand, the item's internal name 
 
 The scan map (2D/3D) works **without** any images. The "Maps" button is a separate popup with sector map screenshots from the in-game journal, purely for reference; they are not included in the repo.
 
-To add them: put images (`.webp`/`.png`) into `maps/`, copy `maps/maps.example.json` → `maps/maps.json` and add entries. Sector map screenshots are on the [wiki](https://abioticfactor.wiki.gg/) and in guides.
+To add them: put images (`.webp`/`.png`) into `maps/`, copy `maps/maps.example.json` → `maps/maps.json` and add one entry per sector. Sector map screenshots are on the [wiki](https://abioticfactor.wiki.gg/) and in guides.
+
+Each sector is its **own `{ }` object** inside the list, separated by commas — only `name` (the dropdown label) and `image` (the file name) are read:
+
+```json
+{
+  "maps": [
+    { "name": "Office Sector 1", "image": "OfficeSector1.png" },
+    { "name": "Manufacturing West", "image": "ManufacturingWest.png" },
+    { "name": "Reactors", "image": "Reactors.png" }
+  ]
+}
+```
 
 ---
 
