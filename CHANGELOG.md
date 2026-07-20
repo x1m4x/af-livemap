@@ -3,6 +3,20 @@
 Release checklist: bump `VERSION` in `server/server.py`, add a section here,
 rebuild `dist/AF-LiveMap-<version>.zip`, upload to Nexus.
 
+## 0.3.6 — 2026-07-18
+
+- **Fixed `maps.json` silently coming up empty.** The shipped example carried
+  a long dash in its `_comment`; edited in Notepad and saved as ANSI, that one
+  character became an invalid UTF-8 byte, the browser's JSON parse threw, and
+  the Maps popup showed nothing at all — with no hint as to why. The example
+  is now plain ASCII, and the server parses `maps.json` itself (trying UTF-8,
+  BOM, then ANSI code pages) and hands the page clean JSON, so a mis-saved
+  file — or one with Russian sector names — still works. Genuinely broken JSON
+  now degrades to an empty list *and* prints a warning naming the file.
+- README (EN/RU): corrected the scanning description — the default full-sphere
+  mode ignores where you look, so "just pan the camera" was wrong — plus a
+  `maps.json` example and nginx reverse-proxy instructions.
+
 ## 0.3.5 — 2026-07-18
 
 - **New `scan_cone_deg` option — map large areas much faster.** The rays are

@@ -1,7 +1,7 @@
 {
-  "_comment": "Copy this file to maps.json and put your sector images in this folder. Each sector is its OWN { ... } object inside the list, separated by commas — do not repeat keys inside one object. Only \"name\" (shown in the dropdown) and \"image\" (file name) are used.",
+  "_comment": "Copy this file to maps.json and put your sector images in this folder. Each sector is its OWN { } object in the list, separated by commas - do not repeat keys inside one object. Only 'name' (the dropdown label) and 'image' (the file name) are used.",
   "maps": [
-    { "id": "placeholder", "name": "Placeholder (grid)", "image": "placeholder.svg" },
+    { "name": "Placeholder (grid)", "image": "placeholder.svg" },
     { "name": "Office Sector 1", "image": "OfficeSector1.png" },
     { "name": "Manufacturing West", "image": "ManufacturingWest.png" }
   ]

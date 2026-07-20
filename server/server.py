@@ -24,7 +24,7 @@ if isinstance(sys.stdout, io.TextIOWrapper) and sys.stdout.encoding.lower() != "
 
 # Единственный источник версии: печатается при старте, отдаётся клиенту в
 # /api/worlds и показывается в шапке UI. Менять при каждом релизе (см. CHANGELOG.md).
-VERSION = "0.3.5"
+VERSION = "0.3.6"
 
 
 # ==================== Console localization (en/ru) ====================
@@ -46,6 +46,7 @@ CONSOLE_STRINGS = {
         "portals_migrated": "Portals cleaned up: {merged} duplicates merged, {purged} removed inside no-portal zones, {renamed} renamed (backup: portals.json.bak)",
         "already_running": "ERROR: another AF LiveMap server (pid {pid}) is already using this data folder.\nRunning two servers corrupts the saved scan. Close the other one and start again.",
         "load_refused": "ERROR: {path} exists ({size} MB) but could not be read after several attempts.\nRefusing to start with an empty scan — that would overwrite your map.\nCheck the file (or restore {path}.bak) and start again.",
+        "maps_unreadable": "WARNING: {path} could not be parsed as JSON - the Maps popup will be empty. Check it in a JSON validator.",
     },
     "ru": {
         "scan_loaded": "Скан загружен: {total} ячеек, миров: {worlds}",
@@ -63,6 +64,7 @@ CONSOLE_STRINGS = {
         "portals_migrated": "Порталы почищены: слито дублей {merged}, удалено в зонах {purged}, переименовано {renamed} (бэкап: portals.json.bak)",
         "already_running": "ОШИБКА: другой сервер AF LiveMap (pid {pid}) уже работает с этой папкой данных.\nДва сервера одновременно портят сохранённый скан. Закрой второй и запусти заново.",
         "load_refused": "ОШИБКА: {path} существует ({size} МБ), но не читается после нескольких попыток.\nНе стартую с пустым сканом — это перезаписало бы твою карту.\nПроверь файл (или восстанови {path}.bak) и запусти заново.",
+        "maps_unreadable": "ВНИМАНИЕ: {path} не разобрать как JSON - попап «Карты» будет пуст. Проверь файл JSON-валидатором.",
     },
 }
 
@@ -730,6 +732,31 @@ notes_path: str = ""
 notes_lock = threading.Lock()
 
 
+def load_maps_config() -> dict:
+    """Read maps/maps.json tolerantly and hand the client clean UTF-8 JSON.
+
+    Players edit this file in Notepad, which happily saves it as ANSI. A single
+    non-ASCII character (a dash in a comment, a Russian sector name) then became
+    an invalid UTF-8 byte, the browser's JSON.parse threw, and the whole map
+    list silently came up empty. Serving it parsed — with an encoding fallback —
+    means such a file still works instead of failing wholesale.
+    """
+    path = os.path.join(MAPS_DIR, "maps.json")
+    try:
+        raw = open(path, "rb").read()
+    except OSError:
+        return {"maps": []}
+    for encoding in ("utf-8-sig", "cp1252", "cp1251", "latin-1"):
+        try:
+            data = json.loads(raw.decode(encoding))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        maps = data.get("maps") if isinstance(data, dict) else None
+        return {"maps": maps if isinstance(maps, list) else []}
+    print(sc("maps_unreadable", path=path))
+    return {"maps": []}
+
+
 def load_notes() -> dict:
     try:
         with open(notes_path, "r", encoding="utf-8") as f:
@@ -987,7 +1014,7 @@ class Handler(BaseHTTPRequestHandler):
             with notes_lock:
                 self._send_json(load_notes())
         elif path == "/api/maps":
-            self._send_file(MAPS_DIR, "maps.json")
+            self._send_json(load_maps_config())
         elif path.startswith("/maps/"):
             self._send_file(MAPS_DIR, path[len("/maps/"):])
         else:
