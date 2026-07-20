@@ -54,7 +54,14 @@
 
 ### 1. UE4SS
 
-Поставь UE4SS для Abiotic Factor (сборка с конфигами под игру — [Nexus Mods](https://www.nexusmods.com/abioticfactor/mods/35)). Распаковывается в папку игры:
+Поставь UE4SS для Abiotic Factor (сборка с конфигами под игру — [Nexus Mods](https://www.nexusmods.com/abioticfactor/mods/35)).
+
+> **Бери `UE4SS v3.0.1-553-gc68f4f7`** (второй файл, под основным). Именно на нём
+> мод разрабатывается и тестируется. Более свежие экспериментальные сборки иначе
+> хукают blueprint-функции и роняли игру посреди сессии
+> (`Failed to find function … in Abiotic_PlayerCharacter_C`).
+
+Распаковывается в папку игры:
 
 ```
 <папка игры>\AbioticFactor\Binaries\Win64\

@@ -54,7 +54,14 @@ Requires: **Windows**, an installed copy of **Abiotic Factor**, **Python 3.10+**
 
 ### 1. UE4SS
 
-Install UE4SS for Abiotic Factor (a build with game-specific configs — [Nexus Mods](https://www.nexusmods.com/abioticfactor/mods/35)). It unpacks into the game folder:
+Install UE4SS for Abiotic Factor (a build with game-specific configs — [Nexus Mods](https://www.nexusmods.com/abioticfactor/mods/35)).
+
+> **Use `UE4SS v3.0.1-553-gc68f4f7`** (the second file, below the main one). That's
+> the build this mod is developed and tested against. Newer experimental builds
+> change how Blueprint functions are hooked and have crashed the game mid-session
+> for players (`Failed to find function … in Abiotic_PlayerCharacter_C`).
+
+It unpacks into the game folder:
 
 ```
 <game folder>\AbioticFactor\Binaries\Win64\
