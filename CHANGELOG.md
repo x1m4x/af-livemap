@@ -3,6 +3,21 @@
 Release checklist: bump `VERSION` in `server/server.py`, add a section here,
 rebuild `dist/AF-LiveMap-<version>.zip`, upload to Nexus.
 
+## 0.3.7 — 2026-07-18
+
+- **The markers list is now grouped, sorted and collapsible.** Everything used
+  to be one flat run of rows; with a few dozen entries it was a wall of text.
+  Now each kind (Markers / Traders / Elevators / Portals / No-portal zones /
+  Carts) is its own collapsible section with a count, and entries are sorted by
+  name — numerically, so `Desk 2` comes before `Desk 10`.
+- **Folders, without any extra UI:** name a marker `Flathill/Generator` and it
+  goes into a collapsible **Flathill** folder together with everything else
+  sharing that prefix. Renaming is all it takes; nothing to set up, and old
+  names keep working unchanged.
+- Collapsed sections are remembered between sessions, and selecting something
+  on the map automatically opens the folder it lives in, so a highlighted entry
+  is never hidden.
+
 ## 0.3.6 — 2026-07-18
 
 - **Fixed `maps.json` silently coming up empty.** The shipped example carried

@@ -49,6 +49,12 @@ const I18N = (() => {
 
       // waypoints
       no_waypoints: "No markers in this world. \"+ Marker\" places one where you stand.",
+      sec_markers: "Markers",
+      sec_traders: "Traders",
+      sec_elevators: "Elevators",
+      sec_portals: "Portals",
+      sec_zones: "No-portal zones",
+      sec_carts: "Carts",
       confirm_delete_waypoint: "Delete marker \"{name}\"?",
       waypoint_prompt: "Marker name:",
       no_player_data: "No player position data — join the game.",
@@ -176,6 +182,12 @@ const I18N = (() => {
       rename_failed: "Сервер не принял переименование — перезапусти server.py (у тебя старая версия).",
 
       no_waypoints: "Точек в этом мире нет. «+ Точка» ставит точку там, где ты стоишь.",
+      sec_markers: "Точки",
+      sec_traders: "Торговцы",
+      sec_elevators: "Лифты",
+      sec_portals: "Порталы",
+      sec_zones: "Зоны «не портал»",
+      sec_carts: "Тележки",
       confirm_delete_waypoint: "Удалить точку «{name}»?",
       waypoint_prompt: "Название точки:",
       no_player_data: "Нет данных о позиции игрока — зайди в игру.",

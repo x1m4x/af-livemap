@@ -571,100 +571,184 @@ function applyRowSelection() {
   list.querySelectorAll(".wp-row.selected").forEach(r => r.classList.remove("selected"));
   if (!key) return;
   const row = list.querySelector(`.wp-row[data-key="${key}"]`);
-  if (row) row.classList.add("selected");
+  if (row) {
+    row.classList.add("selected");
+    // Picking something on the map must not highlight a row hidden inside a
+    // collapsed folder — open every section above it
+    for (let node = row.parentElement; node && node !== list; node = node.parentElement) {
+      if (node.classList.contains("wp-section-body") && node.classList.contains("hidden")) {
+        node.classList.remove("hidden");
+        const head = node.previousElementSibling;
+        const caret = head && head.querySelector(".wp-caret");
+        if (caret) caret.textContent = "▾";
+      }
+    }
+  }
   return row;
+}
+
+// Collapsed state of list sections/folders — remembered across reloads
+function listCollapsed(id) {
+  try { return localStorage.getItem("af_fold_" + id) === "1"; } catch (err) { return false; }
+}
+function setListCollapsed(id, on) {
+  try { localStorage.setItem("af_fold_" + id, on ? "1" : "0"); } catch (err) { /* private mode */ }
+}
+
+// Collapsible header; returns the body element to put rows into
+function makeSection(parent, id, title, count, nested) {
+  const wrap = document.createElement("div");
+  wrap.className = nested ? "wp-section wp-nested" : "wp-section";
+  const head = document.createElement("div");
+  head.className = "wp-section-head";
+  const caret = document.createElement("span");
+  caret.className = "wp-caret";
+  const label = document.createElement("span");
+  label.className = "wp-section-title";
+  label.textContent = title;
+  const badge = document.createElement("span");
+  badge.className = "wp-count";
+  badge.textContent = count;
+  head.append(caret, label, badge);
+  const body = document.createElement("div");
+  body.className = "wp-section-body";
+  const collapsed = listCollapsed(id);
+  body.classList.toggle("hidden", collapsed);
+  caret.textContent = collapsed ? "▸" : "▾";
+  head.onclick = () => {
+    const nowCollapsed = !body.classList.contains("hidden");
+    body.classList.toggle("hidden", nowCollapsed);
+    caret.textContent = nowCollapsed ? "▸" : "▾";
+    setListCollapsed(id, nowCollapsed);
+  };
+  wrap.append(head, body);
+  parent.appendChild(wrap);
+  return body;
+}
+
+// One collapsible section per element type. Entries are sorted by name, and
+// a "Folder/Name" prefix puts them into a nested collapsible folder — so
+// naming markers "Flathill/Generator" groups them without any extra UI.
+function renderListSection(list, id, title, entries) {
+  if (entries.length === 0) return;
+  const byName = (a, b) => a.sortName.localeCompare(b.sortName, undefined, { numeric: true });
+  const folders = new Map();
+  const loose = [];
+  for (const entry of entries) {
+    const cut = entry.sortName.indexOf("/");
+    if (cut > 0) {
+      const folder = entry.sortName.slice(0, cut).trim();
+      if (!folders.has(folder)) folders.set(folder, []);
+      folders.get(folder).push(entry);
+    } else {
+      loose.push(entry);
+    }
+  }
+  const body = makeSection(list, id, title, entries.length, false);
+  for (const [folder, items] of [...folders].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const sub = makeSection(body, id + "/" + folder, folder, items.length, true);
+    for (const e of items.sort(byName)) makeRow(sub, e.label, e.pos, e.buttons, e.key);
+  }
+  for (const e of loose.sort(byName)) makeRow(body, e.label, e.pos, e.buttons, e.key);
 }
 
 function renderWaypointList() {
   const list = document.getElementById("waypointList");
   list.innerHTML = "";
-  if (state.waypoints.length === 0) {
+  const total = state.waypoints.length + state.traders.length + state.elevators.length
+    + state.portals.length + state.portalIgnore.length + state.carts.length;
+  if (total === 0) {
     const empty = document.createElement("div");
     empty.className = "wp-name";
     empty.textContent = t("no_waypoints");
     list.appendChild(empty);
   }
 
-  for (const wp of state.waypoints) {
-    makeRow(list, wp.name, wp, [
+  renderListSection(list, "wp", t("sec_markers"), state.waypoints.map(wp => ({
+    sortName: wp.name, label: wp.name, pos: wp, key: `wp:${wp.id}`,
+    buttons: [
       makeRenameButton("api/waypoints", wp.id, wp.name, loadWaypoints),
       makeRouteButton(wp.id, wp.name, wp.world, wp.x, wp.y, wp.z),
       makeButton("×", () => {
         if (confirm(t("confirm_delete_waypoint", { name: wp.name }))) deleteWaypoint(wp.id);
       }, t("delete_btn")),
-    ], `wp:${wp.id}`);
-  }
+    ],
+  })));
 
-  for (const tr of state.traders) {
-    makeRow(list,
-      t("trader_label", { name: tr.name }),
-      tr,
-      [
-        makeRenameButton("api/traders", tr.id, tr.name, loadTraders),
-        makeRouteButton(tr.id, tr.name, tr.world, tr.x, tr.y, tr.z),
-        makeButton("×", () => {
-          if (confirm(t("confirm_delete_trader", { name: tr.name }))) deleteTrader(tr.id);
-        }, t("delete_btn")),
-      ], `trader:${tr.id}`);
-  }
+  renderListSection(list, "trader", t("sec_traders"), state.traders.map(tr => ({
+    sortName: tr.name, label: t("trader_label", { name: tr.name }), pos: tr,
+    key: `trader:${tr.id}`,
+    buttons: [
+      makeRenameButton("api/traders", tr.id, tr.name, loadTraders),
+      makeRouteButton(tr.id, tr.name, tr.world, tr.x, tr.y, tr.z),
+      makeButton("×", () => {
+        if (confirm(t("confirm_delete_trader", { name: tr.name }))) deleteTrader(tr.id);
+      }, t("delete_btn")),
+    ],
+  })));
 
-  for (const elevator of state.elevators) {
-    makeRow(list,
-      t("elevator_label", { name: elevator.name, n: elevator.stops.length,
-        doors: elevator.doors ? t("elevator_doors_suffix") : "" }),
-      { x: elevator.x, y: elevator.y, z: elevator.stops[0] },
-      [
-        makeRenameButton("api/elevators", elevator.id, elevator.name, loadElevators),
-        makeButton("×", () => {
-          if (confirm(t("confirm_delete_elevator", { name: elevator.name }))) deleteElevator(elevator.id);
-        }, t("delete_btn")),
-      ], `elevator:${elevator.id}`);
-  }
+  renderListSection(list, "elevator", t("sec_elevators"), state.elevators.map(elevator => ({
+    sortName: elevator.name,
+    label: t("elevator_label", { name: elevator.name, n: elevator.stops.length,
+      doors: elevator.doors ? t("elevator_doors_suffix") : "" }),
+    pos: { x: elevator.x, y: elevator.y, z: elevator.stops[0] },
+    key: `elevator:${elevator.id}`,
+    buttons: [
+      makeRenameButton("api/elevators", elevator.id, elevator.name, loadElevators),
+      makeButton("×", () => {
+        if (confirm(t("confirm_delete_elevator", { name: elevator.name }))) deleteElevator(elevator.id);
+      }, t("delete_btn")),
+    ],
+  })));
 
-  for (const portal of state.portals) {
+  renderListSection(list, "portal", t("sec_portals"), state.portals.map(portal => {
     const crossWorld = portal.from.world !== portal.to.world;
     const anchor = portal.from.world === state.viewedWorld ? portal.from : portal.to;
-    makeRow(list,
-      `◎ ${portal.name}${crossWorld ? ` (${portal.from.world} → ${portal.to.world})` : ""} · ${t("portal_uses", { n: portal.count })}`,
-      anchor,
-      [
+    return {
+      sortName: portal.name,
+      label: `◎ ${portal.name}${crossWorld ? ` (${portal.from.world} → ${portal.to.world})` : ""} · ${t("portal_uses", { n: portal.count })}`,
+      pos: anchor, key: `portal:${portal.id}`,
+      buttons: [
         makeRenameButton("api/portals", portal.id, portal.name, loadPortals),
         makeRouteButton(`portal:${portal.id}`, portal.name, anchor.world, anchor.x, anchor.y, anchor.z),
         makeButton("×", () => {
           if (confirm(t("confirm_delete_portal", { name: portal.name }))) deletePortal(portal.id);
         }, t("delete_btn")),
-      ], `portal:${portal.id}`);
-  }
+      ],
+    };
+  }));
 
-  for (const zone of state.portalIgnore) {
-    makeRow(list,
-      t("zone_label", { name: zone.name, m: (zone.radius / 100).toFixed(0) }),
-      zone,
-      [
-        makeRenameButton("api/portals", zone.id, zone.name, loadPortals),
-        makeButton("×", () => {
-          if (confirm(t("confirm_delete_zone", { name: zone.name }))) {
-            deletePortalIgnoreZone(zone.id);
-          }
-        }, t("delete_btn")),
-      ], `zone:${zone.id}`);
-  }
+  renderListSection(list, "zone", t("sec_zones"), state.portalIgnore.map(zone => ({
+    sortName: zone.name,
+    label: t("zone_label", { name: zone.name, m: (zone.radius / 100).toFixed(0) }),
+    pos: zone, key: `zone:${zone.id}`,
+    buttons: [
+      makeRenameButton("api/portals", zone.id, zone.name, loadPortals),
+      makeButton("×", () => {
+        if (confirm(t("confirm_delete_zone", { name: zone.name }))) {
+          deletePortalIgnoreZone(zone.id);
+        }
+      }, t("delete_btn")),
+    ],
+  })));
 
-  for (const cart of state.carts) {
+  renderListSection(list, "cart", t("sec_carts"), state.carts.map(cart => {
     const first = cart.path[0];
     const last = cart.path[cart.path.length - 1];
-    makeRow(list,
-      t("cart_label", { name: cart.name, m: cartLengthMeters(cart).toFixed(0) }),
-      { x: first[0], y: first[1], z: first[2] },
-      [
+    return {
+      sortName: cart.name,
+      label: t("cart_label", { name: cart.name, m: cartLengthMeters(cart).toFixed(0) }),
+      pos: { x: first[0], y: first[1], z: first[2] }, key: `cart:${cart.id}`,
+      buttons: [
         makeRenameButton("api/carts", cart.id, cart.name, loadCarts),
         makeRouteButton(`cart:${cart.id}:a`, t("cart_start_name", { name: cart.name }), cart.world, first[0], first[1], first[2], "▶A"),
         makeRouteButton(`cart:${cart.id}:b`, t("cart_end_name", { name: cart.name }), cart.world, last[0], last[1], last[2], "▶B"),
         makeButton("×", () => {
           if (confirm(t("confirm_delete_cart", { name: cart.name }))) deleteCart(cart.id);
         }, t("delete_btn")),
-      ], `cart:${cart.id}`);
-  }
+      ],
+    };
+  }));
 
   applyRowSelection();
 }

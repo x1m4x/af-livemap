@@ -29,6 +29,7 @@ No pre-made maps needed: you just walk around and look, and the map reveals itse
 
 ### 📍 Markers, elevators, carts, portals
 - **Markers (waypoints)** — placed at the player's position, with a name. Rename, delete, "show on map", build a route.
+- **The list groups itself.** Each kind (markers, traders, elevators, portals, carts) is a collapsible section with a count, sorted by name. Name a marker `Flathill/Generator` and it drops into a collapsible **Flathill** folder with everything sharing that prefix — no setup, just renaming. Collapsed sections are remembered, and picking something on the map opens its folder.
 - **Elevators** — recorded with one button: stand in the cabin, press "Elevator", ride through the floors, press again. The map detects the stops by height. The elevator zone is excluded from the scan (the moving cabin no longer creates junk), and routes can ride between floors.
 - **Carts / rail transport** — the whole path is recorded; in routes it's a "start ↔ end" edge that draws the real rail trajectory.
 - **Portals — auto-detected.** Teleport (a big jump or a world change) and a portal is recorded automatically, both entrance and exit; the list shows how many times you traveled through each. Repeat passes confirm it. Death/respawn is not counted as a portal. There are **"no-portal" zones** (covering the whole height of your base) — for a teleport-to-base item, so it doesn't spawn false portals.

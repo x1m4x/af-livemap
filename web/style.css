@@ -111,6 +111,33 @@ html, body {
   min-height: 32px;
 }
 .wp-row button.wp-active { background: #9e6a03; border-color: #d4a017; }
+
+/* Collapsible groups in the markers list */
+.wp-section { margin-bottom: 2px; }
+.wp-section-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 4px;
+  cursor: pointer;
+  user-select: none;
+  color: #8b949e;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid #21262d;
+}
+.wp-section-head:hover { color: #d4a017; }
+.wp-caret { width: 10px; font-size: 10px; }
+.wp-section-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wp-count {
+  background: #21262d;
+  border-radius: 9px;
+  padding: 0 6px;
+  font-size: 11px;
+  color: #8b949e;
+}
+.wp-nested { margin-left: 10px; }
+.wp-nested > .wp-section-head { border-bottom: none; }
 #routeStatus { font-size: 12px; color: #d4a017; padding-top: 6px; }
 
 /* ---- Выбор торговца ---- */
